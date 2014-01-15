@@ -1,24 +1,38 @@
-# WP-DraftsForFriends
-Contributors: GamerZ  
-Donate link: http://lesterchan.net/site/donation/  
-Tags: friends, preview, drafts, send, drafts for friends, share draft, send draft  
-Requires at least: 3.0.1  
-Tested up to: 3.8  
-Stable tag: master  
-License: GPLv2 or later  
-License URI: http://www.gnu.org/licenses/gpl-2.0.html  
+=== WP-DraftsForFriends ===
+Contributors: GamerZ
+Donate link: http://lesterchan.net/site/donation/
+Tags: friends, preview, drafts, send, drafts for friends, share draft, send draft
+Requires at least: 3.0.1
+Tested up to: 3.8
+Stable tag: master
+License: GPLv2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Now you don't need to add friends as users to the blog in order to let them preview your drafts
 
-## Description
+== Description ==
 
 This plugin will generate a unique link that you can send to your friends to allow them to preview your draft before they are published. You are able to set the expiry for the link as well.
 
-Modified from Drafts for Friends originally by Neville Longbottom.
+== Installation ==
 
-## Changelog
+1. Upload `wp-draftforfriends` folder to the `/wp-content/plugins/` directory
+2. Activate the `WP-DraftsForFriends` plugin through the 'Plugins' menu in WordPress
+3. You can access `WP-DraftsForFriends via `WP-Admin -> Post -> Drafts for Friends`
 
-### Version 1.0.0
+== Frequently Asked Questions ==
+
+Coming soon ...
+
+== Screenshots ==
+
+1. WP-DraftsForFriends Administrator Page
+2. Extending Expiry of Shared Draft
+3. Previewing shared draft
+
+== Changelog ==
+
+= Version 1.0.0 =
 * Uses it's own table "wp_draftsforfriends" instead of relying on the "shared" field in wp_options
 * New "Date Created", "Date Extended" and "Expires After" column
 * Pagination of shared drafts is now supported
@@ -35,25 +49,9 @@ Modified from Drafts for Friends originally by Neville Longbottom.
 * phpDoc comments are added to the code
 * Fix PHP notices
 
-### 0.0.1
+= 0.0.1 =
 * Initial release
 
-## Installation
-
-1. Upload `wp-draftforfriends` folder to the `/wp-content/plugins/` directory
-2. Activate the `WP-DraftsForFriends` plugin through the 'Plugins' menu in WordPress
-3. You can access `WP-DraftsForFriends via `WP-Admin -> Post -> Drafts for Friends`
-
-## Screenshots
-
-1. WP-DraftsForFriends Administrator Page
-2. Extending Expiry of Shared Draft
-3. Previewing shared draft
-
-## Frequently Asked Questions
-
-Coming soon ...
-
-## Upgrade Notice
+== Upgrade Notice ==
 
 N/A
