@@ -78,7 +78,7 @@
 			'nonce': $( this ).data( 'nonce' )
 		};
 
-		if ( confirm ( draftForFriendsAdminL10n.confirm_delete.replace( '{{post_title}}', sharedDraft.post_title ) ) ) {
+		if ( confirm ( draftsForFriendsAdminL10n.confirm_delete.replace( '{{post_title}}', sharedDraft.post_title ) ) ) {
 			if ( draftsForFriends.validate( sharedDraft ) ) {
 				draftsForFriends.deleteSharedDraft( sharedDraft );
 			}
@@ -101,7 +101,7 @@
 				if ( $( '.empty-row', shareTableCurrent).length ) {
 					$( '.empty-row', shareTableCurrent).show();
 				} else {
-					$( '<tr class="empty-row"><td colspan="6" style="text-align: center;">' + draftForFriendsAdminL10n.no_shared_drafts + '</td></tr>').appendTo( $( 'tbody', shareTableCurrent) );
+					$( '<tr class="empty-row"><td colspan="6" style="text-align: center;">' + draftsForFriendsAdminL10n.no_shared_drafts + '</td></tr>').appendTo( $( 'tbody', shareTableCurrent) );
 				}
 			// Hide empty message
 			} else {
@@ -114,19 +114,19 @@
 		// Validate shared draft before submitting
 		validate: function( sharedDraft ) {
 			if ( ( isNaN( sharedDraft.id ) || 0 >= sharedDraft.id ) ) {
-				alert( draftForFriendsAdminL10n.error_id );
+				alert( draftsForFriendsAdminL10n.error_id );
 				return false;
 			} else if ( ( isNaN( sharedDraft.post_id ) || 0 >= sharedDraft.post_id ) ) {
-				alert( draftForFriendsAdminL10n.error_post_id );
+				alert( draftsForFriendsAdminL10n.error_post_id );
 				return false;
 			} else if ( ( isNaN( sharedDraft.expires ) || 0 >= sharedDraft.expires ) ) {
-				alert( draftForFriendsAdminL10n.error_expires );
+				alert( draftsForFriendsAdminL10n.error_expires );
 				return false;
 			} else if ( '' === $.trim( sharedDraft.nonce ) ) {
-				alert( draftForFriendsAdminL10n.empty_nonce );
+				alert( draftsForFriendsAdminL10n.empty_nonce );
 				return false;
 			} else if ( '' === $.trim( sharedDraft.measure ) ) {
-				alert( draftForFriendsAdminL10n.empty_measure );
+				alert( draftsForFriendsAdminL10n.empty_measure );
 				return false;
 			}
 			return true;
@@ -139,7 +139,7 @@
 			var add_ajax = $.ajax({
 				type: 'post',
 				dataType : 'json',
-				url: draftForFriendsAdminL10n.admin_ajax_url,
+				url: draftsForFriendsAdminL10n.admin_ajax_url,
 				data: 'action=draftsforfriends-admin&do=add' +
 					'&post_id=' + sharedDraft.post_id +
 					'&expires=' + sharedDraft.expires +
@@ -177,7 +177,7 @@
 			var extend_ajax = $.ajax({
 				type: 'post',
 				dataType : 'json',
-				url: draftForFriendsAdminL10n.admin_ajax_url,
+				url: draftsForFriendsAdminL10n.admin_ajax_url,
 				data: 'action=draftsforfriends-admin&do=extend' +
 					'&id=' + sharedDraft.id +
 					'&expires=' + sharedDraft.expires +
@@ -212,7 +212,7 @@
 			var delete_ajax = $.ajax({
 				type: 'post',
 				dataType : 'json',
-				url: draftForFriendsAdminL10n.admin_ajax_url,
+				url: draftsForFriendsAdminL10n.admin_ajax_url,
 				data: 'action=draftsforfriends-admin&do=delete&id=' + sharedDraft.id + '&_ajax_nonce=' + sharedDraft.nonce,
 				cache: false
 			}).done( function( data ) {

@@ -16,7 +16,7 @@ This plugin will generate a unique link that you can send to your friends to all
 
 == Installation ==
 
-1. Upload `wp-draftforfriends` folder to the `/wp-content/plugins/` directory
+1. Upload `wp-draftsforfriends` folder to the `/wp-content/plugins/` directory
 2. Activate the `WP-DraftsForFriends` plugin through the 'Plugins' menu in WordPress
 3. You can access `WP-DraftsForFriends via `WP-Admin -> Post -> Drafts for Friends`
 
