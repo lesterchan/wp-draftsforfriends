@@ -1,0 +1,41 @@
+#icon-draftsforfriends {
+	background: transparent url( '../img/receipt_share.png' ) no-repeat;
+}
+
+.draftsforfriends .collapsed {
+	display: inline;
+}
+.draftsforfriends .expanded {
+	display: none;
+}
+.draftsforfriends .row-actions {
+	margin: 5px 0;
+}
+.draftsforfriends tr:nth-child( odd ) {
+	background-color: #fcfcfc;
+}
+
+#draftsforfriends-message {
+	padding: 10px;
+}
+#draftsforfriends-message.error {
+	color: red;
+}
+#draftsforfriends-message.success {
+	color: green;
+}
+
+/* For No JS */
+.no-js-trash {
+	display: none;
+}
+.no-js .draftsforfriends-extend-form .no-js-trash {
+	display: inline;
+}
+.no-js .draftsforfriends .draftsforfriends-extend-form {
+	display: block;
+	visibility: hidden;
+}
+.no-js .draftsforfriends tr:hover .draftsforfriends-extend-form {
+	visibility: visible;
+}
