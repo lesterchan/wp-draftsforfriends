@@ -45,7 +45,6 @@ class WPDraftsForFriends	{
 		add_action( 'init', array( $this, 'init' ) );
 
 		register_activation_hook( __FILE__, array( $this, 'plugin_activation' ) );
-		register_deactivation_hook( __FILE__, array( $this, 'plugin_deactivation' ) );
 	}
 
 	/**
@@ -117,43 +116,6 @@ class WPDraftsForFriends	{
 
 		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		dbDelta( $create_sql );
-	}
-
-	/**
-	 * What to do when the plugin is being deactivated
-	 *
-	 * @access public
-	 * @param boolean Is the plugin being network deactivated?
-	 * @return void
-	 */
-	public function plugin_deactivation( $network_wide ) {
-		if ( is_multisite() && $network_wide ) {
-			$ms_sites = wp_get_sites();
-
-			if( 0 < sizeof( $ms_sites ) ) {
-				foreach ( $ms_sites as $ms_site ) {
-					switch_to_blog( $ms_site['blog_id'] );
-					$this->plugin_deactivated();
-				}
-			}
-
-			restore_current_blog();
-		} else {
-			$this->plugin_deactivated();
-		}
-	}
-
-	/**
-	 * Delete plugin table when deactivated
-	 *
-	 * @access private
-	 * @return void
-	 */
-	private function plugin_deactivated() {
-		global $wpdb;
-
-		$draftsforfriends_table = $wpdb->prefix . 'draftsforfriends';
-		$wpdb->query( "DROP TABLE IF EXISTS $draftsforfriends_table" );
 	}
 
 	/**
