@@ -95,10 +95,10 @@ class WPDraftsForFriends	{
 	/**
 	 * Create plugin table when activated
 	 *
-	 * @access public
+	 * @access private
 	 * @return void
 	 */
-	public function plugin_activated() {
+	private function plugin_activated() {
 		global $wpdb;
 
 		$draftsforfriends_table = $wpdb->prefix . 'draftsforfriends';
@@ -146,10 +146,10 @@ class WPDraftsForFriends	{
 	/**
 	 * Delete plugin table when deactivated
 	 *
-	 * @access public
+	 * @access private
 	 * @return void
 	 */
-	public function plugin_deactivated() {
+	private function plugin_deactivated() {
 		global $wpdb;
 
 		$draftsforfriends_table = $wpdb->prefix . 'draftsforfriends';
