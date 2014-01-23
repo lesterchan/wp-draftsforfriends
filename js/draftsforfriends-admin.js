@@ -140,7 +140,7 @@
 				type: 'post',
 				dataType : 'json',
 				url: draftsForFriendsAdminL10n.admin_ajax_url,
-				data: 'action=draftsforfriends-admin&do=add' +
+				data: 'action=draftsforfriends_admin&do=add' +
 					'&post_id=' + sharedDraft.post_id +
 					'&expires=' + sharedDraft.expires +
 					'&measure=' + sharedDraft.measure +
@@ -178,8 +178,9 @@
 				type: 'post',
 				dataType : 'json',
 				url: draftsForFriendsAdminL10n.admin_ajax_url,
-				data: 'action=draftsforfriends-admin&do=extend' +
+				data: 'action=draftsforfriends_admin&do=extend' +
 					'&id=' + sharedDraft.id +
+					'&post_id=' + sharedDraft.post_id +
 					'&expires=' + sharedDraft.expires +
 					'&measure=' + sharedDraft.measure +
 					'&_ajax_nonce=' + sharedDraft.nonce,
@@ -213,7 +214,10 @@
 				type: 'post',
 				dataType : 'json',
 				url: draftsForFriendsAdminL10n.admin_ajax_url,
-				data: 'action=draftsforfriends-admin&do=delete&id=' + sharedDraft.id + '&_ajax_nonce=' + sharedDraft.nonce,
+				data: 'action=draftsforfriends_admin&do=delete' +
+					'&id=' + sharedDraft.id +
+					'&post_id=' + sharedDraft.post_id +
+					'&_ajax_nonce=' + sharedDraft.nonce,
 				cache: false
 			}).done( function( data ) {
 				if ( data.success ) {

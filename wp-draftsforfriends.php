@@ -3,7 +3,7 @@
 Plugin Name: WP-DraftsForFriends
 Plugin URI: http://lesterchan.net/portfolio/programming/php/
 Description: Now you don't need to add friends as users to the blog in order to let them preview your drafts. Modified from Drafts for Friends originally by Neville Longbottom.
-Version: 1.0.0
+Version: 1.0.1
 Author: Lester 'GaMerZ' Chan
 Author URI: http://lesterchan.net
 Text Domain: wp-draftsforfriends
@@ -12,7 +12,7 @@ Text Domain: wp-draftsforfriends
 /**
  * Drafts for Friends version
  */
-define( 'WP_DRAFTSFORFRIENDS_VERSION', '1.0.0' );
+define( 'WP_DRAFTSFORFRIENDS_VERSION', '1.0.1' );
 
 
 /**
@@ -57,7 +57,7 @@ class WPDraftsForFriends	{
 		// Actions
 		add_action( 'admin_menu', array( $this, 'add_admin_pages' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_scripts' ) );
-		add_action( 'wp_ajax_draftsforfriends-admin', array( $this, 'admin_actions_ajax' ) );
+		add_action( 'wp_ajax_draftsforfriends_admin', array( $this, 'admin_actions_ajax' ) );
 
 		// Filters
 		add_filter( 'the_posts', array( $this, 'the_posts_intercept') );
@@ -146,7 +146,7 @@ class WPDraftsForFriends	{
 	 */
 	public function admin_actions_ajax() {
 		$output = array( 'error' =>  __( 'No actions specified', 'wp-draftsforfriends' ) );
-		if( isset( $_POST['action'] ) && 'draftsforfriends-admin' == $_POST['action'] ) {
+		if( isset( $_POST['action'] ) && 'draftsforfriends_admin' == $_POST['action'] ) {
 			if( ! empty( $_POST['do'] ) ) {
 				$nonce_error = array( 'error' =>  __( 'Unable to verify nonce', 'wp-draftsforfriends' ) );
 				switch( $_POST['do'] ) {

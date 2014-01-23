@@ -18,6 +18,9 @@ Modified from Drafts for Friends originally by Neville Longbottom.
 
 ## Changelog
 
+### Version 1.0.1
+* Extend shared drafts is now works
+
 ### Version 1.0.0
 * Uses it's own table "wp_draftsforfriends" instead of relying on the "shared" field in wp_options
 * New "Date Created", "Date Extended" and "Expires After" column
