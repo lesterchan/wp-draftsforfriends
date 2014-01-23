@@ -2,7 +2,7 @@
 Contributors: GamerZ  
 Donate link: http://lesterchan.net/site/donation/  
 Tags: friends, preview, drafts, send, drafts for friends, share draft, send draft  
-Requires at least: 3.0.0  
+Requires at least: 3.7  
 Tested up to: 3.8  
 Stable tag: master  
 License: GPLv2 or later  
@@ -17,6 +17,9 @@ This plugin will generate a unique link that you can send to your friends to all
 Modified from Drafts for Friends originally by Neville Longbottom.
 
 ## Changelog
+
+### Version 1.0.2
+* It now supports Multisite Network activation
 
 ### Version 1.0.1
 * Extend shared drafts is now works

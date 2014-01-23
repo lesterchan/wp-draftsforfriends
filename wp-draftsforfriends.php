@@ -3,7 +3,7 @@
 Plugin Name: WP-DraftsForFriends
 Plugin URI: http://lesterchan.net/portfolio/programming/php/
 Description: Now you don't need to add friends as users to the blog in order to let them preview your drafts. Modified from Drafts for Friends originally by Neville Longbottom.
-Version: 1.0.1
+Version: 1.0.2
 Author: Lester 'GaMerZ' Chan
 Author URI: http://lesterchan.net
 Text Domain: wp-draftsforfriends
@@ -12,7 +12,7 @@ Text Domain: wp-draftsforfriends
 /**
  * Drafts for Friends version
  */
-define( 'WP_DRAFTSFORFRIENDS_VERSION', '1.0.1' );
+define( 'WP_DRAFTSFORFRIENDS_VERSION', '1.0.2' );
 
 
 /**
@@ -45,6 +45,7 @@ class WPDraftsForFriends	{
 		add_action( 'init', array( $this, 'init' ) );
 
 		register_activation_hook( __FILE__, array( $this, 'plugin_activation' ) );
+		register_deactivation_hook( __FILE__, array( $this, 'plugin_deactivation' ) );
 	}
 
 	/**
@@ -68,15 +69,40 @@ class WPDraftsForFriends	{
 	}
 
 	/**
+	 * What to do when the plugin is being activated
+	 *
+	 * @access public
+	 * @param boolean Is the plugin being network activated?
+	 * @return void
+	 */
+	public function plugin_activation( $network_wide ) {
+		if ( is_multisite() && $network_wide ) {
+			$ms_sites = wp_get_sites();
+
+			if( 0 < sizeof( $ms_sites ) ) {
+				foreach ( $ms_sites as $ms_site ) {
+					switch_to_blog( $ms_site['blog_id'] );
+					$this->plugin_activated();
+				}
+			}
+
+	        restore_current_blog();
+		} else {
+			$this->plugin_activated();
+		}
+	}
+
+	/**
 	 * Create plugin table when activated
 	 *
 	 * @access public
 	 * @return void
 	 */
-	public function plugin_activation() {
+	public function plugin_activated() {
 		global $wpdb;
 
-		$create_sql = "CREATE TABLE $wpdb->draftsforfriends (".
+		$draftsforfriends_table = $wpdb->prefix . 'draftsforfriends';
+		$create_sql = "CREATE TABLE $draftsforfriends_table (".
 			'id bigint(20) unsigned NOT NULL AUTO_INCREMENT,'.
 			'post_id bigint(20) unsigned NOT NULL,'.
 			'user_id bigint(20) unsigned NOT NULL,'.
@@ -91,6 +117,43 @@ class WPDraftsForFriends	{
 
 		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		dbDelta( $create_sql );
+	}
+
+	/**
+	 * What to do when the plugin is being deactivated
+	 *
+	 * @access public
+	 * @param boolean Is the plugin being network deactivated?
+	 * @return void
+	 */
+	public function plugin_deactivation( $network_wide ) {
+		if ( is_multisite() && $network_wide ) {
+			$ms_sites = wp_get_sites();
+
+			if( 0 < sizeof( $ms_sites ) ) {
+				foreach ( $ms_sites as $ms_site ) {
+					switch_to_blog( $ms_site['blog_id'] );
+					$this->plugin_deactivated();
+				}
+			}
+
+			restore_current_blog();
+		} else {
+			$this->plugin_deactivated();
+		}
+	}
+
+	/**
+	 * Delete plugin table when deactivated
+	 *
+	 * @access public
+	 * @return void
+	 */
+	public function plugin_deactivated() {
+		global $wpdb;
+
+		$draftsforfriends_table = $wpdb->prefix . 'draftsforfriends';
+		$wpdb->query( "DROP TABLE IF EXISTS $draftsforfriends_table" );
 	}
 
 	/**
