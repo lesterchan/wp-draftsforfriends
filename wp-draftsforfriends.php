@@ -129,17 +129,17 @@ class WPDraftsForFriends	{
 		if( 'posts_page_wp-draftsforfriends/wp-draftsforfriends' == $hook_suffix ) {
 
 			// Minified CSS/CSS URLs
-			$admin_css_url = 'wp-draftsforfriends/css/draftsforfriends-admin.min.css';
-			$admin_js_url = 'wp-draftsforfriends/js/draftsforfriends-admin.min.js';
+			$admin_css_url = 'css/draftsforfriends-admin.min.css';
+			$admin_js_url = 'js/draftsforfriends-admin.min.js';
 
 			// If WP_DEBUG mode we load non-minified URLs
 			if( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				$admin_css_url = 'wp-draftsforfriends/css/draftsforfriends-admin.css';
-				$admin_js_url = 'wp-draftsforfriends/js/draftsforfriends-admin.js';
+				$admin_css_url = 'css/draftsforfriends-admin.css';
+				$admin_js_url = 'js/draftsforfriends-admin.js';
 			}
 
-			wp_enqueue_style( 'draftsforfriends-admin', plugins_url( $admin_css_url ), false, WP_DRAFTSFORFRIENDS_VERSION, 'all' );
-			wp_enqueue_script( 'draftsforfriends-admin', plugins_url( $admin_js_url ), array( 'jquery', 'jquery-color' ), WP_DRAFTSFORFRIENDS_VERSION, true );
+			wp_enqueue_style( 'draftsforfriends-admin', plugins_url( $admin_css_url, __FILE__ ), false, WP_DRAFTSFORFRIENDS_VERSION );
+			wp_enqueue_script( 'draftsforfriends-admin', plugins_url( $admin_js_url, __FILE__ ), array( 'jquery' ), WP_DRAFTSFORFRIENDS_VERSION, true );
 			wp_localize_script( 'draftsforfriends-admin', 'draftsForFriendsAdminL10n', array(
 				'admin_ajax_url'   => admin_url( 'admin-ajax.php', ( is_ssl() ? 'https' : 'http' ) ),
 				'confirm_delete'   => __( 'Are you sure you want to delete this shared draft, \'{{post_title}}\'', 'wp-draftsforfriends' ),
