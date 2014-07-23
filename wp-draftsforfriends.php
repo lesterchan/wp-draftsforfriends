@@ -141,7 +141,7 @@ class WPDraftsForFriends	{
 			wp_enqueue_style( 'draftsforfriends-admin', plugins_url( $admin_css_url, __FILE__ ), false, WP_DRAFTSFORFRIENDS_VERSION );
 			wp_enqueue_script( 'draftsforfriends-admin', plugins_url( $admin_js_url, __FILE__ ), array( 'jquery' ), WP_DRAFTSFORFRIENDS_VERSION, true );
 			wp_localize_script( 'draftsforfriends-admin', 'draftsForFriendsAdminL10n', array(
-				'admin_ajax_url'   => admin_url( 'admin-ajax.php', ( is_ssl() ? 'https' : 'http' ) ),
+				'admin_ajax_url'   => admin_url( 'admin-ajax.php' ),
 				'confirm_delete'   => __( 'Are you sure you want to delete this shared draft, \'{{post_title}}\'', 'wp-draftsforfriends' ),
 				'error_id'         => __( 'Invalid shared draft id', 'wp-draftsforfriends' ),
 				'error_post_id'    => __( 'Please choose a draft to share', 'wp-draftsforfriends' ),
