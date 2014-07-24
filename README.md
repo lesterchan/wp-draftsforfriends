@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/lesterchan/wp-draftsforfriends.svg?branch=master)](https://travis-ci.org/lesterchan/wp-draftsforfriends)
 # WP-DraftsForFriends
 Contributors: GamerZ  
 Donate link: http://lesterchan.net/site/donation/  
@@ -12,10 +11,12 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Now you don't need to add friends as users to the blog in order to let them preview your drafts
 
 ## Description
-
 This plugin will generate a unique link that you can send to your friends to allow them to preview your draft before they are published. You are able to set the expiry for the link as well.
 
 Modified from Drafts for Friends originally by Neville Longbottom.
+
+### Build Status
+[![Build Status](https://travis-ci.org/lesterchan/wp-draftsforfriends.svg?branch=master)](https://travis-ci.org/lesterchan/wp-draftsforfriends)
 
 ### Development
 * [https://github.com/lesterchan/wp-draftsforfriends](https://github.com/lesterchan/wp-draftsforfriends "https://github.com/lesterchan/wp-draftsforfriends")
