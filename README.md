@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/lesterchan/wp-draftsforfriends.svg?branch=master)](https://travis-ci.org/lesterchan/wp-draftsforfriends)
 # WP-DraftsForFriends
 Contributors: GamerZ  
 Donate link: http://lesterchan.net/site/donation/  
