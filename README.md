@@ -4,7 +4,7 @@ Donate link: http://lesterchan.net/site/donation/
 Tags: friends, preview, drafts, send, drafts for friends, share draft, send draft  
 Requires at least: 3.7  
 Tested up to: 4.0  
-Stable tag: master  
+Stable tag: trunk  
 License: GPLv2 or later  
 License URI: http://www.gnu.org/licenses/gpl-2.0.html  
 
