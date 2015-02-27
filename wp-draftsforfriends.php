@@ -438,9 +438,9 @@ class WPDraftsForFriends	{
 	 * @return array
 	 */
 	private function get_users_posts( $post_type ) {
-		global $wpdb, $current_user;
+		global $wpdb;
 
-		$where_and = ' AND post_author = ' . intval( $current_user->id );
+		$where_and = ' AND post_author = ' . get_current_user_id();
 		if( current_user_can( 'edit_others_posts' ) )
 			$where_and = '';
 
@@ -496,8 +496,7 @@ class WPDraftsForFriends	{
 	 * @return string Note that the string starts with a space
 	 */
 	private function where_and() {
-		global $current_user;
-		$where_and = ' AND user_id = ' . intval( $current_user->id );
+		$where_and = ' AND user_id = ' . get_current_user_id();
 
 		if( current_user_can( 'edit_others_posts' ) )
 			$where_and = '';
@@ -672,7 +671,7 @@ class WPDraftsForFriends	{
 										<option value="" disabled="disabled"><?php echo $dt[0]; ?></option>
 										<?php foreach ( $dt[2] as $d ): ?>
 											<?php if ( empty( $d->post_title ) ) continue; ?>
-											<option value="<?php echo $d->ID?>"><?php echo wp_specialchars( $d->post_title ); ?></option>
+											<option value="<?php echo $d->ID?>"><?php echo esc_html( $d->post_title ); ?></option>
 										<?php endforeach; ?>
 									<?php endif; ?>
 								<?php endforeach; ?>
