@@ -126,7 +126,7 @@ class WPDraftsForFriends	{
 	 * @return void
 	 */
 	public function admin_scripts( $hook_suffix ) {
-		if( 'posts_page_wp-draftsforfriends/wp-draftsforfriends' == $hook_suffix ) {
+		if( 'posts_page_wp-draftsforfriends/wp-draftsforfriends' === strtolower( $hook_suffix ) ) {
 
 			// Minified CSS/CSS URLs
 			$admin_css_url = 'css/draftsforfriends-admin.min.css';
