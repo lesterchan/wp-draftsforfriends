@@ -272,4 +272,109 @@ class Test_DraftsForFriends_Preview extends WP_UnitTestCase {
 
 		$this->assertCount( 1, $this->visit( $pending, 'HASHPENDING0000000000000000000AA' ) );
 	}
+
+	/**
+	 * Trashing a shared post revokes its links.
+	 *
+	 * Until 2.0.0 only `publish` was excluded, so a trashed draft was still served
+	 * to anyone holding the URL -- the most obvious way to withdraw a draft did
+	 * nothing.
+	 */
+	public function test_trashing_the_post_revokes_the_link() {
+		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+
+		wp_trash_post( $this->draft_id );
+
+		$this->assertCount( 0, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+	}
+
+	/**
+	 * Restoring the post from the trash makes the same link work again.
+	 */
+	public function test_untrashing_the_post_restores_the_link() {
+		wp_trash_post( $this->draft_id );
+		$this->assertCount( 0, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+
+		wp_untrash_post( $this->draft_id );
+		wp_update_post(
+			array(
+				'ID'          => $this->draft_id,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+	}
+
+	/**
+	 * A share survives the post being scheduled or made private.
+	 *
+	 * Both are still unpublished, and the author shared the post deliberately, so
+	 * the link is expected to keep working.
+	 *
+	 * @dataProvider data_surviving_statuses
+	 *
+	 * @param string $status Status to move the post to.
+	 */
+	public function test_share_survives_status_change( $status ) {
+		wp_update_post(
+			array(
+				'ID'          => $this->draft_id,
+				'post_status' => $status,
+			)
+		);
+
+		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+	}
+
+	/**
+	 * Statuses a share must survive.
+	 *
+	 * @return array
+	 */
+	public function data_surviving_statuses() {
+		return array(
+			'pending' => array( 'pending' ),
+			'private' => array( 'private' ),
+		);
+	}
+
+	/**
+	 * Publishing the post ends the preview; the post is public by then anyway.
+	 */
+	public function test_publishing_the_post_ends_the_preview() {
+		wp_update_post(
+			array(
+				'ID'          => $this->draft_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		$posts = $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' );
+
+		// WordPress serves it as an ordinary published post, so it is still one
+		// result -- but the plugin has not touched it, which the open comment
+		// status shows.
+		$this->assertCount( 1, $posts );
+		$this->assertSame( get_post_field( 'comment_status', $this->draft_id ), $posts[0]->comment_status );
+	}
+
+	/**
+	 * Deleting the post for good removes its shares.
+	 */
+	public function test_deleting_the_post_removes_its_shares() {
+		global $wpdb;
+
+		$before = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) );
+
+		$this->assertGreaterThan( 0, $before );
+
+		wp_delete_post( $this->draft_id, true );
+
+		$this->assertSame(
+			0,
+			(int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) ),
+			'shares for a deleted post must not be left behind'
+		);
+	}
 }

@@ -87,6 +87,10 @@ class DraftsForFriends {
 		// also runs on load. It is a single option read once the table is current.
 		add_action( 'admin_init', array( $this, 'maybe_upgrade_table' ) );
 
+		// A share whose post is gone can never be shown or managed, and it used to
+		// keep inflating the admin item count from a table nothing joined it out of.
+		add_action( 'deleted_post', array( 'DraftsForFriends_Shares', 'delete_for_post' ) );
+
 		new DraftsForFriends_Preview();
 
 		// Registered unconditionally, and pointed at a loader rather than at the

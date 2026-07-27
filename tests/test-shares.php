@@ -413,4 +413,149 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 			}
 		}
 	}
+
+	/**
+	 * The count() and query() methods must always agree.
+	 *
+	 * The count used to read the bare table while query() joined wp_posts, so a
+	 * share whose post had been hard-deleted inflated the total without ever
+	 * appearing in the list. That threw off the item count above the list table
+	 * and left its last page short.
+	 */
+	public function test_count_agrees_with_query_for_an_orphaned_share() {
+		global $wpdb;
+
+		wp_set_current_user( $this->author_id );
+
+		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+
+		$orphan_post = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_author' => $this->author_id,
+			)
+		);
+
+		$orphan = DraftsForFriends_Shares::create( $orphan_post, 1, 'h' )['shared'];
+
+		// Strand the row the way a pre-2.0.0 install would have: delete the post
+		// straight from the table, behind the deleted_post hook.
+		$wpdb->delete( $wpdb->posts, array( 'ID' => $orphan_post ), array( '%d' ) );
+		clean_post_cache( $orphan_post );
+
+		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->draftsforfriends} WHERE id = %d", $orphan->id ) ), 'the orphan row is still there' );
+
+		$this->assertSame(
+			count( DraftsForFriends_Shares::query( 'date_created', 'desc', 0, 100 ) ),
+			DraftsForFriends_Shares::count(),
+			'the count must match the number of rows the list can actually show'
+		);
+	}
+
+	/**
+	 * Deleting a post takes its shares with it.
+	 */
+	public function test_deleting_a_post_deletes_its_shares() {
+		global $wpdb;
+
+		wp_set_current_user( $this->author_id );
+
+		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
+
+		wp_delete_post( $this->draft_id, true );
+
+		$this->assertSame(
+			'0',
+			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) )
+		);
+	}
+
+	/**
+	 * Trashing a post leaves its shares in place, because trashing is reversible.
+	 */
+	public function test_trashing_a_post_keeps_its_shares() {
+		global $wpdb;
+
+		wp_set_current_user( $this->author_id );
+
+		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+
+		wp_trash_post( $this->draft_id );
+
+		$this->assertSame(
+			'1',
+			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) )
+		);
+	}
+
+	/**
+	 * Sorting orders the rows, rather than merely not erroring.
+	 */
+	public function test_query_actually_sorts() {
+		wp_set_current_user( $this->author_id );
+
+		$first = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_author' => $this->author_id,
+				'post_title'  => 'AAA First',
+			)
+		);
+
+		$last = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_author' => $this->author_id,
+				'post_title'  => 'ZZZ Last',
+			)
+		);
+
+		DraftsForFriends_Shares::create( $first, 1, 'h' );
+		DraftsForFriends_Shares::create( $last, 5, 'h' );
+
+		$asc = DraftsForFriends_Shares::query( 'post_title', 'asc', 0, 50 );
+		$this->assertSame( 'AAA First', $asc[0]->post_title );
+
+		$desc = DraftsForFriends_Shares::query( 'post_title', 'desc', 0, 50 );
+		$this->assertSame( 'ZZZ Last', $desc[0]->post_title );
+
+		// A longer share sorts last by expiry ascending.
+		$by_expiry = DraftsForFriends_Shares::query( 'date_expired', 'asc', 0, 50 );
+		$this->assertSame( 'ZZZ Last', end( $by_expiry )->post_title );
+	}
+
+	/**
+	 * Paging returns distinct rows rather than repeating the first page.
+	 */
+	public function test_query_pages() {
+		wp_set_current_user( $this->author_id );
+
+		for ( $i = 0; $i < 5; $i++ ) {
+			DraftsForFriends_Shares::create( $this->draft_id, $i + 1, 'h' );
+		}
+
+		$page_one = wp_list_pluck( DraftsForFriends_Shares::query( 'id', 'asc', 0, 2 ), 'id' );
+		$page_two = wp_list_pluck( DraftsForFriends_Shares::query( 'id', 'asc', 2, 2 ), 'id' );
+
+		$this->assertCount( 2, $page_one );
+		$this->assertCount( 2, $page_two );
+		$this->assertSame( array(), array_intersect( $page_one, $page_two ) );
+	}
+
+	/**
+	 * A share for a post that no longer exists is not returned by get().
+	 */
+	public function test_get_ignores_an_orphaned_share() {
+		global $wpdb;
+
+		wp_set_current_user( $this->author_id );
+
+		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+
+		$wpdb->delete( $wpdb->posts, array( 'ID' => $this->draft_id ), array( '%d' ) );
+		clean_post_cache( $this->draft_id );
+
+		$this->assertNull( DraftsForFriends_Shares::get( $share->id ) );
+	}
 }

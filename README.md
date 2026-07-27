@@ -19,6 +19,9 @@ Modified from Drafts for Friends originally by Neville Longbottom.
 ### Development
 * [https://github.com/lesterchan/wp-draftsforfriends](https://github.com/lesterchan/wp-draftsforfriends "https://github.com/lesterchan/wp-draftsforfriends")
 
+### Credits
+* Plugin icon by [Freepik](https://www.freepik.com) from [Flaticon](https://www.flaticon.com)
+
 ### Donations
 I spent most of my free time creating, updating, maintaining and supporting these plugins, if you really love my plugins and could spare me a couple of bucks, I will really appreciate it. If not feel free to use it without any obligations.
 
@@ -39,6 +42,8 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 * The plugin now works when installed under a directory name other than `wp-draftsforfriends`
 * Dropped the jQuery dependency; the admin script is now plain JavaScript
 * Restructured the plugin into `includes/` with one class per file
+* Moving a shared post to the trash now revokes its links, instead of leaving them working. Restoring the post from the trash makes them work again
+* Deleting a post permanently now deletes its shared drafts, which were previously left behind and counted towards the total shown above the list even though they were never listed
 * Removed `img/receipt_share.png`, which was only ever used by the `icon32` admin markup WordPress dropped in 3.8
 
 ### 1.0.2
@@ -58,7 +63,7 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 * Link hash now check for expiry as well
 * Link hash is no longer 8 characters with special characters, it is now 32 characters with no special characters
 * Added nonce security check
-* Added a 32x32 icon to the plugin from http://www.fatcow.com/free-icons
+* Added a 32x32 icon to the plugin
 * Moved JavaScript and CSS files out of the plugin code into it's own file and hence there is a new "js" and "css" folder
 * Adding, deleting and extending of shared draft is now AJAXify, it is still backward compatible with browsers that does not support JavaScript
 * phpDoc comments are added to the code
@@ -87,9 +92,9 @@ The screen moved to `admin.php?page=draftsforfriends` in 2.0.0. It used to be ad
 Links you have already given to friends are unaffected. Those point at the post itself and do not go through the admin screen.
 
 ### A friend says the link shows "Page not found"
-The link has expired, or it has been deleted. Open *Posts -> Drafts for Friends* and check the *Expires After* column: an expired share reads `Expired`. Use *Extend* on that row to give it more time, and the same link starts working again.
+The link has expired, it has been deleted, or the post has been moved to the trash. Open *Posts -> Drafts for Friends* and check the *Expires After* column: an expired share reads `Expired`. Use *Extend* on that row to give it more time, and the same link starts working again. Restoring the post from the trash also makes its links work again.
 
-The link also stops working once the post is published, at which point the post is public and the link is no longer needed.
+Once the post is published the link stops previewing and simply shows the published post, which is public by then anyway.
 
 ### Who can see which shared drafts?
 Anyone with the `edit_others_posts` capability — administrators and editors — sees every shared draft on the site and can share any unpublished post. Authors and contributors see only their own, and can only share posts they are allowed to edit.

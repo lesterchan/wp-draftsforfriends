@@ -37,6 +37,23 @@ class DraftsForFriends_Preview {
 	}
 
 	/**
+	 * Statuses a share link must never serve.
+	 *
+	 * `publish` because the post is public already and WordPress serves it
+	 * itself; `trash` and `auto-draft` because neither is something the author
+	 * still means to show anyone. Trashing a shared draft used to leave the link
+	 * working, which made the most obvious way to withdraw a draft do nothing.
+	 *
+	 * Anything else unpublished is fair game, so a share survives a draft being
+	 * scheduled or made private, and custom statuses keep working.
+	 *
+	 * @return array
+	 */
+	private static function denied_statuses() {
+		return array( 'publish', 'trash', 'auto-draft' );
+	}
+
+	/**
 	 * The hash from the request, if there is one.
 	 *
 	 * @return string
@@ -70,9 +87,13 @@ class DraftsForFriends_Preview {
 			return $posts;
 		}
 
+		if ( ! isset( $posts[0]->ID ) ) {
+			return $posts;
+		}
+
 		$post = $posts[0];
 
-		if ( ! isset( $post->ID ) || 'publish' === get_post_status( $post ) ) {
+		if ( in_array( get_post_status( $post ), self::denied_statuses(), true ) ) {
 			return $posts;
 		}
 

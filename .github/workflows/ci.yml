@@ -36,8 +36,8 @@ jobs:
       - name: Run PHPCS
         run: $(composer global config bin-dir --absolute)/phpcs -q --report=checkstyle . | cs2pr
 
-  eslint:
-    name: JS coding standards
+  js:
+    name: JS coding standards and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -52,6 +52,10 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint:js
+
+      # vitest + jsdom, driving the admin script the way the browser does.
+      - name: Run the script tests
+        run: npm run test:js
 
   phpunit:
     name: PHPUnit (WP ${{ matrix.wordpress }}, PHP ${{ matrix.php }})

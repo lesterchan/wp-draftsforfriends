@@ -112,14 +112,18 @@ class DraftsForFriends_Shares {
 	 * Returned with a leading space so it can be concatenated onto a WHERE clause.
 	 * The value is an integer from get_current_user_id(), never request data.
 	 *
+	 * @param string $alias Table alias to qualify the column with, for the queries
+	 *                      that join wp_posts. Empty for queries on the bare table.
 	 * @return string
 	 */
-	private static function scope() {
+	private static function scope( $alias = '' ) {
 		if ( current_user_can( 'edit_others_posts' ) ) {
 			return '';
 		}
 
-		return ' AND user_id = ' . get_current_user_id();
+		$column = '' === $alias ? 'user_id' : $alias . '.user_id';
+
+		return ' AND ' . $column . ' = ' . get_current_user_id();
 	}
 
 	/**
@@ -138,7 +142,7 @@ class DraftsForFriends_Shares {
 		}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- scope() emits an integer from get_current_user_id().
-		return $wpdb->get_row( $wpdb->prepare( "SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE d.id = %d" . self::scope(), $id ) );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE d.id = %d" . self::scope( 'd' ), $id ) );
 	}
 
 	/**
@@ -149,8 +153,28 @@ class DraftsForFriends_Shares {
 	public static function count() {
 		global $wpdb;
 
+		// The same INNER JOIN as query(), so the two can never disagree. Counting
+		// the bare table let a share whose post had been deleted inflate the total
+		// while never appearing in the list, which threw off the item count and
+		// left the last page of the list table short.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- scope() emits an integer from get_current_user_id().
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE 1=1" . self::scope() );
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE 1=1" . self::scope( 'd' ) );
+	}
+
+	/**
+	 * Drop every share for a post that has been deleted for good.
+	 *
+	 * Hooked to deleted_post. Trashing deliberately does not come through here:
+	 * it is reversible, so the share is only withheld while the post sits in the
+	 * trash and works again if the post is restored.
+	 *
+	 * @param int $post_id Post that was deleted.
+	 * @return void
+	 */
+	public static function delete_for_post( $post_id ) {
+		global $wpdb;
+
+		$wpdb->delete( $wpdb->draftsforfriends, array( 'post_id' => (int) $post_id ), array( '%d' ) );
 	}
 
 	/**
@@ -171,7 +195,7 @@ class DraftsForFriends_Shares {
 		// $orderby and $order are both constrained to literals above; neither can
 		// be bound as a placeholder, and %i needs WP 6.2 while this plugin is 6.0.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- see above.
-		return $wpdb->get_results( $wpdb->prepare( "SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE 1=1" . self::scope() . " ORDER BY {$orderby} {$order} LIMIT %d, %d", $offset, $limit ) );
+		return $wpdb->get_results( $wpdb->prepare( "SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE 1=1" . self::scope( 'd' ) . " ORDER BY {$orderby} {$order} LIMIT %d, %d", $offset, $limit ) );
 	}
 
 	/**
