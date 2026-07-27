@@ -286,7 +286,13 @@ class DraftsForFriends_Table extends WP_List_Table {
 				<?php esc_html_e( 'Extend by', 'wp-draftsforfriends' ); ?>
 				<input type="number" min="1" step="1" class="draftsforfriends-expires small-text" value="2" />
 			</label>
-			<select class="draftsforfriends-measure">
+			<?php
+			// The number input above is wrapped in its label; this one needs an
+			// explicit association, and the id has to carry the share id because
+			// every row renders one of these.
+			?>
+			<label class="screen-reader-text" for="draftsforfriends-measure-<?php echo esc_attr( $id ); ?>"><?php esc_html_e( 'Duration unit', 'wp-draftsforfriends' ); ?></label>
+			<select id="draftsforfriends-measure-<?php echo esc_attr( $id ); ?>" class="draftsforfriends-measure">
 				<?php foreach ( DraftsForFriends_Admin::measures() as $value => $label ) : ?>
 					<option value="<?php echo esc_attr( $value ); ?>" <?php selected( 'h', $value ); ?>><?php echo esc_html( $label ); ?></option>
 				<?php endforeach; ?>

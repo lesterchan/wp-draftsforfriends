@@ -178,18 +178,18 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		$html = $this->render();
 		$slug = DraftsForFriends_Admin::SLUG;
 
+		// What the plugin is actually responsible for: the registration.
 		$this->assertArrayHasKey( DraftsForFriends_Admin::SECTION, $wp_settings_sections[ $slug ] );
 		$this->assertSame(
 			array( 'draftsforfriends-post-id', 'draftsforfriends-expires' ),
 			array_keys( $wp_settings_fields[ $slug ][ DraftsForFriends_Admin::SECTION ] )
 		);
 
-		// The wrapper do_settings_sections() emits, which the screen no longer
-		// writes itself.
-		$this->assertStringContainsString( '<table class="form-table" role="presentation">', $html );
-		$this->assertStringContainsString( '<h2>Share Draft with Friends</h2>', $html );
-
-		// label_for, resolved by do_settings_fields().
+		// That the screen renders that registration rather than ignoring it.
+		// Asserted through the field output and the label_for association --
+		// the contract -- rather than by matching the table markup core wraps
+		// it in, which is core's to change and not this plugin's to pin.
+		$this->assertStringContainsString( 'Share Draft with Friends', $html );
 		$this->assertStringContainsString( '<label for="draftsforfriends-post-id">Choose a draft:</label>', $html );
 		$this->assertStringContainsString( '<label for="draftsforfriends-expires">Share it for:</label>', $html );
 
@@ -199,6 +199,53 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'name="expires"', $html );
 		$this->assertStringContainsString( 'name="measure"', $html );
 		$this->assertStringContainsString( '<optgroup label="Drafts:">', $html );
+	}
+
+	/**
+	 * Every control on the screen is labelled, including the unit dropdowns,
+	 * which carry no visible label of their own.
+	 */
+	public function test_every_control_is_labelled() {
+		wp_set_current_user( $this->author_id );
+
+		$share = DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
+		$html  = $this->render();
+		$id    = (int) $share->id;
+
+		$this->assertStringContainsString(
+			'<label class="screen-reader-text" for="draftsforfriends-measure">',
+			$html,
+			'the add form unit dropdown is unlabelled'
+		);
+
+		$this->assertStringContainsString(
+			'<label class="screen-reader-text" for="draftsforfriends-measure-' . $id . '">',
+			$html,
+			'the row unit dropdown is unlabelled'
+		);
+
+		// One row, one id: the per-row control cannot reuse the add form's.
+		$this->assertStringContainsString( 'id="draftsforfriends-measure-' . $id . '"', $html );
+
+		// The class the script selects on survived the id being added.
+		$this->assertStringContainsString( 'class="draftsforfriends-measure"', $html );
+	}
+
+	/**
+	 * The draft picker does not depend on registration having filled anything
+	 * in first: it stands on its own.
+	 */
+	public function test_post_field_renders_standalone() {
+		wp_set_current_user( $this->author_id );
+
+		$admin = new DraftsForFriends_Admin();
+
+		ob_start();
+		$admin->render_post_field( array( 'label_for' => 'draftsforfriends-post-id' ) );
+		$html = (string) ob_get_clean();
+
+		$this->assertStringContainsString( '<optgroup label="Drafts:">', $html );
+		$this->assertStringContainsString( 'value="' . $this->draft_id . '"', $html );
 	}
 
 	/**

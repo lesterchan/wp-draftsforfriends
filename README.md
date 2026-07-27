@@ -33,6 +33,7 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 * **IMPORTANT:** The screen now requires JavaScript. The parallel non-JavaScript form handling has been removed.
 * Fixed a bug where a shared draft could appear in places it was not shared to. Once one valid preview link had been opened, the post was re-used for every later query in that same request that returned nothing of its own, including requests carrying a wrong, expired or deleted link
 * Fixed the post title being output unescaped on the admin screen
+* Fixed the duration unit dropdowns having no label, which left screen readers announcing them as unlabelled combo boxes
 * Fixed activation and uninstall fatally erroring on Multisite, which called a function removed in WordPress 5.1
 * Fixed Multisite activation and uninstall skipping every site past the hundredth
 * Fixed extending and deleting checking permissions against a post supplied with the request rather than the one the shared draft actually points at

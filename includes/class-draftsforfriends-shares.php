@@ -410,11 +410,19 @@ class DraftsForFriends_Shares {
 
 		foreach ( $groups as $status => $label ) {
 			$args = array(
-				'post_type'   => 'post',
-				'post_status' => $status,
-				'numberposts' => -1,
-				'orderby'     => 'modified',
-				'order'       => 'DESC',
+				'post_type'              => 'post',
+				'post_status'            => $status,
+				'numberposts'            => -1,
+				'orderby'                => 'modified',
+				'order'                  => 'DESC',
+
+				// Only the ID and the title are ever read, and this is an
+				// unbounded query. Priming the meta and term caches for every
+				// draft on the site to build a dropdown of titles is pure
+				// waste, and on a site with a few thousand drafts it is the
+				// expensive part of loading the screen.
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
 			);
 
 			// An author sees only their own; anyone who may edit others' posts

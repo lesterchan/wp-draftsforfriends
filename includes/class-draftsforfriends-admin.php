@@ -49,14 +49,11 @@ class DraftsForFriends_Admin {
 	private $hook_suffix = '';
 
 	/**
-	 * Posts the current user may share, grouped by status.
+	 * Memoised shareable_groups(), or null before it has been asked for.
 	 *
-	 * Filled when the fields are registered, so the field callback does not
-	 * repeat the three queries the registration already ran.
-	 *
-	 * @var array
+	 * @var array|null
 	 */
-	private $groups = array();
+	private $groups = null;
 
 	/**
 	 * Register the hooks.
@@ -135,11 +132,9 @@ class DraftsForFriends_Admin {
 	 * @return void
 	 */
 	public function register_fields() {
-		$this->groups = DraftsForFriends_Shares::shareable_posts();
-
 		$total = 0;
 
-		foreach ( $this->groups as $group ) {
+		foreach ( $this->shareable_groups() as $group ) {
 			$total += $group['count'];
 		}
 
@@ -174,6 +169,25 @@ class DraftsForFriends_Admin {
 	}
 
 	/**
+	 * Posts the current user may share, grouped by status.
+	 *
+	 * Memoised, because registration needs the count to decide whether there is
+	 * a form at all and the field callback needs the posts themselves, and the
+	 * two run in the same request. Reached for through here rather than filled
+	 * in by register_fields() so the callback stands on its own: a field that
+	 * only renders when something else ran first is a trap.
+	 *
+	 * @return array
+	 */
+	private function shareable_groups() {
+		if ( null === $this->groups ) {
+			$this->groups = DraftsForFriends_Shares::shareable_posts();
+		}
+
+		return $this->groups;
+	}
+
+	/**
 	 * The draft picker.
 	 *
 	 * @param array $args Field arguments add_settings_field() was given.
@@ -183,7 +197,7 @@ class DraftsForFriends_Admin {
 		?>
 		<select name="post_id" id="<?php echo esc_attr( $args['label_for'] ); ?>">
 			<option value=""></option>
-			<?php foreach ( $this->groups as $group ) : ?>
+			<?php foreach ( $this->shareable_groups() as $group ) : ?>
 				<?php if ( ! $group['count'] ) : ?>
 					<?php continue; ?>
 				<?php endif; ?>
@@ -209,27 +223,18 @@ class DraftsForFriends_Admin {
 	public function render_duration_field( $args ) {
 		?>
 		<input name="expires" id="<?php echo esc_attr( $args['label_for'] ); ?>" type="number" min="1" step="1" value="2" class="small-text" />
+		<?php
+		// The field's own label, the one label_for wires up, belongs to the
+		// number input. Without this the unit is announced as an unlabelled
+		// combo box.
+		?>
+		<label class="screen-reader-text" for="draftsforfriends-measure"><?php esc_html_e( 'Duration unit', 'wp-draftsforfriends' ); ?></label>
 		<select name="measure" id="draftsforfriends-measure">
 			<?php foreach ( self::measures() as $value => $label ) : ?>
 				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( 'h', $value ); ?>><?php echo esc_html( $label ); ?></option>
 			<?php endforeach; ?>
 		</select>
 		<?php
-	}
-
-	/**
-	 * Whether the add form's section was registered.
-	 *
-	 * Read back off the Settings API's own registry rather than tracked in a
-	 * property, so the screen cannot show a form for a section that is not
-	 * there, or hide one that is.
-	 *
-	 * @return bool
-	 */
-	private function has_share_section() {
-		global $wp_settings_sections;
-
-		return isset( $wp_settings_sections[ self::SLUG ][ self::SECTION ] );
 	}
 
 	/**
@@ -288,15 +293,30 @@ class DraftsForFriends_Admin {
 
 		$table = new DraftsForFriends_Table();
 		$table->prepare_items();
+
+		// Rendered up front so the form element is only emitted when the
+		// Settings API actually produced something to put in it -- which is the
+		// case when the user has nothing to share and register_fields()
+		// therefore registered no section. Asking the output rather than the
+		// $wp_settings_sections global also means a third party that adds a
+		// field to this page gets a form to put it in.
+		ob_start();
+		do_settings_sections( self::SLUG );
+		$fields = (string) ob_get_clean();
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Drafts for Friends', 'wp-draftsforfriends' ); ?></h1>
 
 			<div id="draftsforfriends-message" class="notice" style="display: none;"><p></p></div>
 
-			<?php if ( $this->has_share_section() ) : ?>
+			<?php if ( '' !== $fields ) : ?>
 				<form id="draftsforfriends-add">
-					<?php do_settings_sections( self::SLUG ); ?>
+					<?php
+					// Already-escaped markup from do_settings_sections() and the
+					// field callbacks above.
+					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					echo $fields;
+					?>
 					<?php submit_button( __( 'Go', 'wp-draftsforfriends' ), 'primary', 'draftsforfriends_submit', true, array( 'id' => 'draftsforfriends-submit' ) ); ?>
 				</form>
 			<?php endif; ?>
