@@ -38,7 +38,9 @@ class WPDraftsForFriends {
     public function __construct(){
         global $wpdb;
 
-        // MySQL table name
+        // MySQL table name. The tables[] entry is what keeps the property correct
+        // across switch_to_blog(); the assignment alone is not multisite-safe.
+        $wpdb->tables[]         = 'draftsforfriends';
         $wpdb->draftsforfriends = $wpdb->prefix . 'draftsforfriends';
 
         add_action( 'init', array( $this, 'init' ) );
@@ -75,16 +77,18 @@ class WPDraftsForFriends {
      */
     public function plugin_activation( $network_wide ) {
         if ( is_multisite() && $network_wide ) {
-            $ms_sites = wp_get_sites();
+            // wp_get_sites() was removed in WP 5.1 and fatals here. get_sites()
+            // defaults 'number' to 100, so it must be lifted explicitly or every
+            // site past the hundredth silently goes without its table.
+            $site_ids = get_sites( array( 'fields' => 'ids', 'number' => 0 ) );
 
-            if( 0 < sizeof( $ms_sites ) ) {
-                foreach ( $ms_sites as $ms_site ) {
-                    switch_to_blog( $ms_site['blog_id'] );
-                    $this->plugin_activated();
-                }
+            foreach ( $site_ids as $site_id ) {
+                switch_to_blog( (int) $site_id );
+                $this->plugin_activated();
+                // Inside the loop: switch_to_blog() pushes onto a stack, so one
+                // restore after the loop leaves it unwound by all but one.
+                restore_current_blog();
             }
-
-            restore_current_blog();
         } else {
             $this->plugin_activated();
         }
@@ -170,28 +174,45 @@ class WPDraftsForFriends {
      */
     public function admin_actions_ajax() {
         $output = array( 'error' =>  __( 'No actions specified', 'wp-draftsforfriends' ) );
-        if( isset( $_POST['action'] ) && 'draftsforfriends_admin' == $_POST['action'] ) {
-            if( ! empty( $_POST['do'] ) ) {
+
+        // Gate the whole endpoint on the same capability as the menu, before any
+        // request data is looked at. The per-post checks downstream stay: this is
+        // the coarse "may you use this screen at all" test.
+        if ( ! current_user_can( 'publish_posts' ) ) {
+            echo json_encode( array( 'error' => __( 'You do not have permission to manage shared drafts.', 'wp-draftsforfriends' ) ) );
+            exit();
+        }
+
+        // Reading a missing key raises a warning on PHP 8, so default it.
+        $nonce = isset( $_POST['_ajax_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_ajax_nonce'] ) ) : '';
+        $id    = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+        $do    = isset( $_POST['do'] ) ? sanitize_key( wp_unslash( $_POST['do'] ) ) : '';
+        $action = isset( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : '';
+
+        if( 'draftsforfriends_admin' === $action ) {
+            if( '' !== $do ) {
                 $nonce_error = array( 'error' =>  __( 'Unable to verify nonce', 'wp-draftsforfriends' ) );
-                switch( $_POST['do'] ) {
+                switch( $do ) {
                     case 'add':
-                        if ( wp_verify_nonce( $_POST['_ajax_nonce'], 'draftsforfriends-add' ) )
+                        if ( wp_verify_nonce( $nonce, 'draftsforfriends-add' ) )
                             $output = $this->process_add( $_POST );
                         else
                             $output = $nonce_error;
                         break;
                     case 'extend':
-                        if ( wp_verify_nonce( $_POST['_ajax_nonce'], 'draftsforfriends-extend-' . intval( $_POST['id'] ) ) )
+                        if ( wp_verify_nonce( $nonce, 'draftsforfriends-extend-' . $id ) )
                             $output = $this->process_extend( $_POST );
                         else
                             $output = $nonce_error;
                         break;
                     case 'delete':
-                        if ( wp_verify_nonce( $_POST['_ajax_nonce'], 'draftsforfriends-delete-' . intval( $_POST['id'] ) ) )
+                        if ( wp_verify_nonce( $nonce, 'draftsforfriends-delete-' . $id ) )
                             $output = $this->process_delete( $_POST );
                         else
                             $output = $nonce_error;
                         break;
+                    default:
+                        $output = array( 'error' => __( 'No actions specified', 'wp-draftsforfriends' ) );
                 }
             }
         }
@@ -215,7 +236,9 @@ class WPDraftsForFriends {
             $expiry = $e;
         }
         $units = array( 's' => 1, 'm' => 60, 'h' => 3600, 'd' => 24 * 3600 );
-        if ( isset( $unit ) && $units[ $unit ] ) {
+        // isset() on the lookup, not on $unit: an unrecognised unit used to raise an
+        // undefined-index warning and then fall through to the value anyway.
+        if ( isset( $units[ $unit ] ) ) {
             $multiply = $units[ $unit ];
         }
         return $expiry * $multiply;
@@ -266,54 +289,63 @@ class WPDraftsForFriends {
      * @return array Array will contain a 'success' key when it is successfully and 'error' key otherwise
      */
     private function process_add( $params ) {
-        global $wpdb, $current_user;
+        global $wpdb;
 
-        if ( $params['post_id'] ) {
-            $p = get_post( intval( $params['post_id'] ) );
-            if ( !$p ) {
-                return array( 'error' => __( 'There is no such post!', 'wp-draftsforfriends' ) );
-            }
-            if ( 'publish' == get_post_status( $p ) ) {
-                return array( 'error' => sprintf( __( 'The post \'%s\' is published!', 'wp-draftsforfriends' ), $p->post_title ) );
-            }
-            if( ! current_user_can( 'edit_post', $p->ID ) ) {
-                return array( 'error' => __( 'You do not have permission to create shared draft for this post.', 'wp-draftsforfriends' ) );
-            }
+        $post_id = isset( $params['post_id'] ) ? intval( $params['post_id'] ) : 0;
 
-            $date_expired = time() + $this->calculate_expiry( intval( $params['expires'] ), $params['measure'] );
-            $wpdb->insert(
-                $wpdb->draftsforfriends,
-                array(
-                    'post_id'      => $p->ID,
-                    'user_id'      => $current_user->ID,
-                    'hash'         => wp_generate_password( 32, false, false ),
-                    'date_created' => current_time( 'mysql', 1 ),
-                    'date_expired' => date( 'Y-m-d H:i:s', $date_expired )
-                ),
-                array(
-                    '%d',
-                    '%d',
-                    '%s',
-                    '%s',
-                    '%s'
-                )
+        // Fell through returning null before, so the caller emitted "null" as its
+        // whole JSON response and the script reported no error at all.
+        if ( ! $post_id ) {
+            return array( 'error' => __( 'Please choose a draft to share', 'wp-draftsforfriends' ) );
+        }
+
+        $p = get_post( $post_id );
+        if ( !$p ) {
+            return array( 'error' => __( 'There is no such post!', 'wp-draftsforfriends' ) );
+        }
+        if ( 'publish' == get_post_status( $p ) ) {
+            return array( 'error' => sprintf( __( 'The post \'%s\' is published!', 'wp-draftsforfriends' ), $p->post_title ) );
+        }
+        if( ! current_user_can( 'edit_post', $p->ID ) ) {
+            return array( 'error' => __( 'You do not have permission to create shared draft for this post.', 'wp-draftsforfriends' ) );
+        }
+
+        $expires = isset( $params['expires'] ) ? intval( $params['expires'] ) : 0;
+        $measure = isset( $params['measure'] ) ? sanitize_key( wp_unslash( $params['measure'] ) ) : '';
+
+        $date_expired = time() + $this->calculate_expiry( $expires, $measure );
+        $wpdb->insert(
+            $wpdb->draftsforfriends,
+            array(
+                'post_id'      => $p->ID,
+                'user_id'      => get_current_user_id(),
+                'hash'         => wp_generate_password( 32, false, false ),
+                'date_created' => current_time( 'mysql', 1 ),
+                'date_expired' => gmdate( 'Y-m-d H:i:s', $date_expired )
+            ),
+            array(
+                '%d',
+                '%d',
+                '%s',
+                '%s',
+                '%s'
+            )
+        );
+
+        if( $wpdb->insert_id ) {
+            $shared_draft = $this->get_shared_draft( intval( $wpdb->insert_id ) );
+            ob_start();
+            $this->print_shared_draft_row( $shared_draft );
+            $output = ob_get_contents();
+            ob_end_clean();
+            return array(
+                'success' => sprintf( __( 'Shared draft for \'%s\' created', 'wp-draftsforfriends' ), $p->post_title ),
+                'shared'   => $shared_draft,
+                'html'    => $output,
+                'count'   => number_format_i18n( $this->get_shared_drafts_count() )
             );
-
-            if( $wpdb->insert_id ) {
-                $shared_draft = $this->get_shared_draft( intval( $wpdb->insert_id ) );
-                ob_start();
-                $this->print_shared_draft_row( $shared_draft );
-                $output = ob_get_contents();
-                ob_end_clean();
-                return array(
-                    'success' => sprintf( __( 'Shared draft for \'%s\' created', 'wp-draftsforfriends' ), $p->post_title ),
-                    'shared'   => $shared_draft,
-                    'html'    => $output,
-                    'count'   => number_format_i18n( $this->get_shared_drafts_count() )
-                );
-            } else {
-                return array( 'error' => sprintf( __( 'Error creating shared draft for \'%s\'', 'wp-draftsforfriends' ), $p->post_title ) );
-            }
+        } else {
+            return array( 'error' => sprintf( __( 'Error creating shared draft for \'%s\'', 'wp-draftsforfriends' ), $p->post_title ) );
         }
     }
 
@@ -327,13 +359,23 @@ class WPDraftsForFriends {
     private function process_delete( $params ) {
         global $wpdb;
 
-        if( ! current_user_can( 'edit_post', $params['post_id'] ) ) {
+        $id = isset( $params['id'] ) ? intval( $params['id'] ) : 0;
+
+        // Load the row first. get_shared_draft() is already scoped by where_and(),
+        // so a row belonging to someone else comes back empty here. The capability
+        // is then checked against the post the row actually points at, rather than
+        // against a post id the requester supplied alongside it.
+        $shared_draft = $this->get_shared_draft( $id );
+
+        if( empty( $shared_draft ) ) {
+            return array( 'error' => __( 'There is no such shared draft!', 'wp-draftsforfriends' ) );
+        }
+
+        if( ! current_user_can( 'edit_post', $shared_draft->post_id ) ) {
             return array( 'error' => __( 'You do not have permission to delete the shared draft for this post.', 'wp-draftsforfriends' ) );
         }
 
-        $shared_draft = $this->get_shared_draft( intval( $params['id'] ) );
-
-        $delete_sql = $wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->draftsforfriends WHERE id = %d" . $this->where_and(), intval( $params['id'] ) ) );
+        $delete_sql = $wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->draftsforfriends WHERE id = %d" . $this->where_and(), $id ) );
 
         if( $delete_sql ) {
             return array(
@@ -356,46 +398,55 @@ class WPDraftsForFriends {
     private function process_extend( $params ) {
         global $wpdb;
 
-        if ( $params['post_id'] ) {
-            $p = get_post( intval( $params['post_id'] ) );
-            if ( !$p ) {
-                return array( 'error' => __( 'There is no such post!', 'wp-draftsforfriends' ) );
-            }
-            if ( 'publish' == get_post_status( $p ) ) {
-                return array( 'error' => sprintf( __( 'The post \'%s\' is published!', 'wp-draftsforfriends' ), $p->post_title ) );
-            }
-            if( ! current_user_can( 'edit_post', $p->ID ) ) {
-                return array( 'error' => __( 'You do not have permission to extend shared draft for this post.', 'wp-draftsforfriends' ) );
-            }
+        $id = isset( $params['id'] ) ? intval( $params['id'] ) : 0;
 
-            $shared_draft = $this->get_shared_draft( intval( $params['id'] ) );
+        // Load the row first, for the same reason as process_delete(): the row is
+        // the authority on which post is being extended, not the request.
+        $shared_draft = $this->get_shared_draft( $id );
 
-            $duration = $this->calculate_expiry( intval( $params['expires'] ), $params['measure'] );
-            $current_date_expired_timestamp = mysql2date( 'G', $shared_draft->date_expired );
+        if( empty( $shared_draft ) ) {
+            return array( 'error' => __( 'There is no such shared draft!', 'wp-draftsforfriends' ) );
+        }
 
-            // If the current shared draft has expired, we should be extending it based on the current time and not the expired time
-            if( time() >= $current_date_expired_timestamp )
-                $new_date_expired_timestamp = time() + $duration;
-            else
-                $new_date_expired_timestamp = $current_date_expired_timestamp + $duration;
+        $p = get_post( $shared_draft->post_id );
+        if ( !$p ) {
+            return array( 'error' => __( 'There is no such post!', 'wp-draftsforfriends' ) );
+        }
+        if ( 'publish' == get_post_status( $p ) ) {
+            return array( 'error' => sprintf( __( 'The post \'%s\' is published!', 'wp-draftsforfriends' ), $p->post_title ) );
+        }
+        if( ! current_user_can( 'edit_post', $p->ID ) ) {
+            return array( 'error' => __( 'You do not have permission to extend shared draft for this post.', 'wp-draftsforfriends' ) );
+        }
 
-            $update_sql = $wpdb->query( $wpdb->prepare( "UPDATE $wpdb->draftsforfriends SET date_extended = %s, date_expired = %s WHERE id = %d" . $this->where_and(), current_time( 'mysql', 1 ), date( 'Y-m-d H:i:s', $new_date_expired_timestamp ), intval( $params['id'] ) ) );
+        $expires = isset( $params['expires'] ) ? intval( $params['expires'] ) : 0;
+        $measure = isset( $params['measure'] ) ? sanitize_key( wp_unslash( $params['measure'] ) ) : '';
 
-            if( $update_sql ) {
-                $shared_draft = $this->get_shared_draft( intval( $params['id'] ) );
-                ob_start();
-                $this->print_shared_draft_row( $shared_draft );
-                $output = ob_get_contents();
-                ob_end_clean();
+        $duration = $this->calculate_expiry( $expires, $measure );
+        $current_date_expired_timestamp = mysql2date( 'G', $shared_draft->date_expired );
 
-                return array(
-                    'success' => __( 'Shared draft extended', 'wp-draftsforfriends' ),
-                    'shared'  => $shared_draft,
-                    'html'    => $output
-                );
-            } else {
-                return array( 'error' => __( 'Error extending shared draft', 'wp-draftsforfriends' ) );
-            }
+        // If the current shared draft has expired, we should be extending it based on the current time and not the expired time
+        if( time() >= $current_date_expired_timestamp )
+            $new_date_expired_timestamp = time() + $duration;
+        else
+            $new_date_expired_timestamp = $current_date_expired_timestamp + $duration;
+
+        $update_sql = $wpdb->query( $wpdb->prepare( "UPDATE $wpdb->draftsforfriends SET date_extended = %s, date_expired = %s WHERE id = %d" . $this->where_and(), current_time( 'mysql', 1 ), gmdate( 'Y-m-d H:i:s', $new_date_expired_timestamp ), $id ) );
+
+        if( $update_sql ) {
+            $shared_draft = $this->get_shared_draft( $id );
+            ob_start();
+            $this->print_shared_draft_row( $shared_draft );
+            $output = ob_get_contents();
+            ob_end_clean();
+
+            return array(
+                'success' => __( 'Shared draft extended', 'wp-draftsforfriends' ),
+                'shared'  => $shared_draft,
+                'html'    => $output
+            );
+        } else {
+            return array( 'error' => __( 'Error extending shared draft', 'wp-draftsforfriends' ) );
         }
     }
 
@@ -512,12 +563,20 @@ class WPDraftsForFriends {
      */
     private function can_view( $post_id ) {
         global $wpdb;
-        if ( isset( $_GET['draftsforfriends'] ) ) {
-            $can_view = intval( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->draftsforfriends WHERE post_id = %d AND hash = %s AND date_expired >= %s", intval( $post_id ), $_GET['draftsforfriends'], current_time( 'mysql', 1 ) ) ) );
-            return ( 1 === $can_view );
+
+        if ( empty( $_GET['draftsforfriends'] ) ) {
+            return false;
         }
 
-        return false;
+        $hash = sanitize_text_field( wp_unslash( $_GET['draftsforfriends'] ) );
+
+        if ( '' === $hash ) {
+            return false;
+        }
+
+        $can_view = intval( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->draftsforfriends WHERE post_id = %d AND hash = %s AND date_expired >= %s", intval( $post_id ), $hash, current_time( 'mysql', 1 ) ) ) );
+
+        return ( 1 === $can_view );
     }
 
     /**
@@ -528,6 +587,11 @@ class WPDraftsForFriends {
      * @return array
      */
     public function posts_results_intercept( $posts ) {
+        // Reset per query. Without this the post captured by an earlier, authorised
+        // query stays on the instance and the_posts_intercept() re-injects it into
+        // every later query in the same request that legitimately returns nothing.
+        $this->shared_draft_post = null;
+
         if ( 1 != count( $posts ) ) return $posts;
         $post = $posts[0];
         $status = get_post_status( $post );
@@ -546,12 +610,16 @@ class WPDraftsForFriends {
      * @return array
      */
     public function the_posts_intercept( $posts ) {
-        if ( empty( $posts ) && ( ! empty( $this->shared_draft_post ) && ! is_null( $this->shared_draft_post ) ) ) {
-            return array( $this->shared_draft_post );
-        } else {
-            $this->shared_draft_post = null;
-            return $posts;
+        // Consume the captured post: it belongs to the query that just ran through
+        // posts_results_intercept(), and to no other.
+        $shared_draft_post = $this->shared_draft_post;
+        $this->shared_draft_post = null;
+
+        if ( empty( $posts ) && ! empty( $shared_draft_post ) ) {
+            return array( $shared_draft_post );
         }
+
+        return $posts;
     }
 
     /**
@@ -561,29 +629,35 @@ class WPDraftsForFriends {
      * @return void
      */
     public function output_existing_menu_sub_admin_page() {
-        $output = array();
+        $output      = array();
+        $nonce_error = array( 'error' => __( 'Unable to verify nonce', 'wp-draftsforfriends' ) );
+
+        // Reading a missing nonce key raises a warning on PHP 8, so each is defaulted.
         // No JS - Adding draft
         if ( isset ( $_POST['draftsforfriends_submit'] ) ) {
-            if ( wp_verify_nonce( $_POST['draftsforfriends-add-nonce'], 'draftsforfriends-add' ) ) {
+            $nonce = isset( $_POST['draftsforfriends-add-nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['draftsforfriends-add-nonce'] ) ) : '';
+            if ( wp_verify_nonce( $nonce, 'draftsforfriends-add' ) ) {
                 $output = $this->process_add( $_POST );
             } else {
-                $output = array( 'error' =>  __( 'Unable to verify nonce', 'wp-draftsforfriends' ) );
+                $output = $nonce_error;
             }
         // No JS - Extend draft
         } elseif( isset ( $_POST['draftsforfriends_extend_submit'] ) ) {
-            $nonce_key = 'draftsforfriends-extend-' . intval( $_POST['id'] );
-            if ( wp_verify_nonce( $_POST[$nonce_key . '-nonce'], $nonce_key ) ) {
+            $nonce_key = 'draftsforfriends-extend-' . ( isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0 );
+            $nonce     = isset( $_POST[ $nonce_key . '-nonce' ] ) ? sanitize_text_field( wp_unslash( $_POST[ $nonce_key . '-nonce' ] ) ) : '';
+            if ( wp_verify_nonce( $nonce, $nonce_key ) ) {
                 $output = $this->process_extend( $_POST );
             } else {
-                $output = array( 'error' =>  __( 'Unable to verify nonce', 'wp-draftsforfriends' ) );
+                $output = $nonce_error;
             }
         // No JS - Delete draft
         } elseif( isset( $_GET['action'] ) && 'delete' == $_GET['action'] ) {
-            $nonce_key = 'draftsforfriends-delete-' . intval( $_GET['id'] );
-            if ( wp_verify_nonce( $_GET['_wpnonce'], $nonce_key ) ) {
+            $nonce_key = 'draftsforfriends-delete-' . ( isset( $_GET['id'] ) ? intval( $_GET['id'] ) : 0 );
+            $nonce     = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+            if ( wp_verify_nonce( $nonce, $nonce_key ) ) {
                 $output = $this->process_delete( $_GET );
             } else {
-                $output = array( 'error' =>  __( 'Unable to verify nonce', 'wp-draftsforfriends' ) );
+                $output = $nonce_error;
             }
         }
 
@@ -623,20 +697,20 @@ class WPDraftsForFriends {
         // Display nicer sorting text
         switch ( $dff_params['sortby'] ) {
             case 'id':
-                $text_sortby = __( 'ID', 'draftsforfriends ');
+                $text_sortby = __( 'ID', 'wp-draftsforfriends' );
                 break;
             case 'post_title':
-                $text_sortby = __( 'Post', 'draftsforfriends ');
+                $text_sortby = __( 'Post', 'wp-draftsforfriends' );
                 break;
             case 'date_extended':
-                $text_sortby = __( 'Date Extended', 'draftsforfriends ');
+                $text_sortby = __( 'Date Extended', 'wp-draftsforfriends' );
                 break;
             case 'date_expired':
-                $text_sortby = __( 'Expires After', 'draftsforfriends ');
+                $text_sortby = __( 'Expires After', 'wp-draftsforfriends' );
                 break;
             case 'date_created':
             default:
-                $text_sortby = __( 'Date Created', 'draftsforfriends ');
+                $text_sortby = __( 'Date Created', 'wp-draftsforfriends' );
         }
         $text_sortorder = __( 'Descending', 'wp-draftsforfriends' );
         if( 'asc' == $dff_params['sortorder'] )
@@ -646,9 +720,10 @@ class WPDraftsForFriends {
         <div id="icon-draftsforfriends" class="icon32"><br /></div>
         <h2><?php _e( 'Drafts for Friends', 'wp-draftsforfriends' ); ?></h2>
         <?php if ( ! empty( $output['success'] ) ): ?>
-            <div id="draftsforfriends-message" class="updated fade success"><?php echo $output['success']; ?></div>
+            <?php // These messages interpolate a post title, so they are escaped here rather than trusted. ?>
+            <div id="draftsforfriends-message" class="updated fade success"><?php echo esc_html( $output['success'] ); ?></div>
         <?php elseif ( ! empty( $output['error'] ) ): ?>
-            <div id="draftsforfriends-message" class="updated fade error"><?php echo $output['error']; ?></div>
+            <div id="draftsforfriends-message" class="updated fade error"><?php echo esc_html( $output['error'] ); ?></div>
         <?php else: ?>
             <div id="draftsforfriends-message" class="updated" style="display: none;"></div>
         <?php endif; ?>
@@ -788,7 +863,7 @@ class WPDraftsForFriends {
      */
     private function print_shared_draft_row( $shared_draft ) {
         $dff_params = $this->get_admin_params();
-        $url = get_bloginfo( 'url' ) . '/?p=' . $shared_draft->post_id . '&draftsforfriends='. $shared_draft->hash;
+        $url = home_url( '/?p=' . (int) $shared_draft->post_id . '&draftsforfriends=' . rawurlencode( $shared_draft->hash ) );
         $delete_nonce = wp_create_nonce( 'draftsforfriends-delete-' . $shared_draft->id );
         $extend_nonce_key = 'draftsforfriends-extend-' . $shared_draft->id;
 
@@ -796,35 +871,36 @@ class WPDraftsForFriends {
         $date_created = mysql2date( 'G' , $shared_draft->date_created ) + $gmt_offset;
         $date_extended = mysql2date( 'G' , $shared_draft->date_extended ) + $gmt_offset;
 ?>
-        <tr id="draftsforfriends-current-<?php echo $shared_draft->id; ?>">
-            <td><?php echo $shared_draft->id; ?></td>
-            <td><?php echo date( get_option( 'time_format' ) . ' ' . get_option( 'date_format' ), $date_created ); ?></td>
-            <td><?php echo $shared_draft->post_title; ?></td>
+        <tr id="draftsforfriends-current-<?php echo (int) $shared_draft->id; ?>">
+            <td><?php echo (int) $shared_draft->id; ?></td>
+            <td><?php echo esc_html( gmdate( get_option( 'time_format' ) . ' ' . get_option( 'date_format' ), $date_created ) ); ?></td>
+            <td><?php echo esc_html( $shared_draft->post_title ); ?></td>
             <td>
-                <a href="<?php echo $url; ?>"><?php echo esc_html( $url ); ?></a>
+                <a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $url ); ?></a>
                 <div class="row-actions hide-if-no-js">
                     <span class="collapsed">
-                        <a href="#" class="expand" data-id="<?php echo $shared_draft->id; ?>">
+                        <a href="#" class="expand" data-id="<?php echo (int) $shared_draft->id; ?>">
                             <?php _e( 'Extend', 'wp-draftsforfriends' ); ?>
                         </a>
                     </span>
                     <span class="expanded">
-                        <a href="#" class="collapse" data-id="<?php echo $shared_draft->id; ?>">
+                        <a href="#" class="collapse" data-id="<?php echo (int) $shared_draft->id; ?>">
                             <?php _e( 'Cancel', 'wp-draftsforfriends' ); ?>
                         </a>
                     </span>
                     |
                     <span class="trash">
-                        <a href="#" class="delete" title="<?php _e( 'Delete', 'wp-draftsforfriends' ); ?>" data-id="<?php echo $shared_draft->id; ?>" data-post_id="<?php echo $shared_draft->post_id; ?>" data-post_title="<?php echo esc_js( $shared_draft->post_title ); ?>" data-nonce="<?php echo $delete_nonce; ?>">
+                        <?php // esc_attr(), not esc_js(): this is an HTML attribute. esc_js() would put backslash escapes into the title the confirm() dialog shows. ?>
+                        <a href="#" class="delete" title="<?php esc_attr_e( 'Delete', 'wp-draftsforfriends' ); ?>" data-id="<?php echo (int) $shared_draft->id; ?>" data-post_id="<?php echo (int) $shared_draft->post_id; ?>" data-post_title="<?php echo esc_attr( $shared_draft->post_title ); ?>" data-nonce="<?php echo esc_attr( $delete_nonce ); ?>">
                             <?php _e( 'Delete', 'wp-draftsforfriends' ); ?>
                         </a>
                     </span>
                 </div>
-                <form class="draftsforfriends-extend-form expanded" action="<?php echo admin_url( 'edit.php?page=' . plugin_basename(__FILE__) ); ?>" method="post" onsubmit="return false;">
+                <form class="draftsforfriends-extend-form expanded" action="<?php echo esc_url( admin_url( 'edit.php?page=' . plugin_basename( __FILE__ ) ) ); ?>" method="post" onsubmit="return false;">
                     <?php wp_nonce_field( $extend_nonce_key, $extend_nonce_key . '-nonce' ); ?>
-                    <input type="hidden" name="id" value="<?php echo $shared_draft->id; ?>" />
-                    <input type="hidden" name="post_id" value="<?php echo $shared_draft->post_id; ?>" />
-                    <input type="hidden" name="dff_page" value="<?php echo $dff_params['page']; ?>" />
+                    <input type="hidden" name="id" value="<?php echo (int) $shared_draft->id; ?>" />
+                    <input type="hidden" name="post_id" value="<?php echo (int) $shared_draft->post_id; ?>" />
+                    <input type="hidden" name="dff_page" value="<?php echo (int) $dff_params['page']; ?>" />
                     <?php _e( 'Extend by', 'wp-draftsforfriends' );?>
                     <input name="expires" type="text" value="2" size="4" />
                     <select name="measure">
@@ -844,16 +920,16 @@ class WPDraftsForFriends {
                                 '_wpnonce' => $delete_nonce
                             )
                         ?>
-                        <a href="<?php echo admin_url( 'edit.php?' . http_build_query( $query_params ) ); ?>" title="<?php _e( 'Delete', 'wp-draftsforfriends' ); ?>"><?php _e( 'Delete', 'wp-draftsforfriends' ); ?></a>
+                        <a href="<?php echo esc_url( admin_url( 'edit.php?' . http_build_query( $query_params ) ) ); ?>" title="<?php esc_attr_e( 'Delete', 'wp-draftsforfriends' ); ?>"><?php _e( 'Delete', 'wp-draftsforfriends' ); ?></a>
                     </span>
                 </form>
             </td>
-            <td><?php echo $this->countdown( $shared_draft->date_expired ); ?></td>
+            <td><?php echo esc_html( $this->countdown( $shared_draft->date_expired ) ); ?></td>
             <td>
                 <?php if( ! is_null( $shared_draft->date_extended ) ): ?>
-                    <?php echo date( get_option( 'time_format' ) . ' ' . get_option( 'date_format' ), $date_extended ); ?>
+                    <?php echo esc_html( gmdate( get_option( 'time_format' ) . ' ' . get_option( 'date_format' ), $date_extended ) ); ?>
                 <?php else: ?>
-                    <?php _e( 'N/A' ); ?>
+                    <?php _e( 'N/A', 'wp-draftsforfriends' ); ?>
                 <?php endif; ?>
             </td>
         </tr>
@@ -876,7 +952,7 @@ class WPDraftsForFriends {
                 <th scope="col" width="5%" class="manage-column sortable desc">
             <?php endif; ?>
                 <a href="<?php echo $this->generate_admin_url( 1, 'id', ( 'id' == $dff_params['sortby'] && 'desc' == $dff_params['sortorder'] ? 'asc' : 'desc' ) ); ?>">
-                    <span><?php _e( 'ID', 'draftsforfriends '); ?></span><span class="sorting-indicator"></span>
+                    <span><?php _e( 'ID', 'wp-draftsforfriends' ); ?></span><span class="sorting-indicator"></span>
                 </a>
             </th>
 
@@ -886,7 +962,7 @@ class WPDraftsForFriends {
                 <th scope="col" width="15%" class="manage-column sortable desc">
             <?php endif; ?>
                 <a href="<?php echo $this->generate_admin_url( 1, 'date_created', ( 'date_created' == $dff_params['sortby'] && 'desc' == $dff_params['sortorder'] ? 'asc' : 'desc' ) ); ?>">
-                    <span><?php _e( 'Date Created', 'draftsforfriends '); ?></span><span class="sorting-indicator"></span>
+                    <span><?php _e( 'Date Created', 'wp-draftsforfriends' ); ?></span><span class="sorting-indicator"></span>
                 </a>
             </th>
 
@@ -896,11 +972,11 @@ class WPDraftsForFriends {
                 <th scope="col" width="20%" class="manage-column sortable desc">
             <?php endif; ?>
                 <a href="<?php echo $this->generate_admin_url( 1, 'post_title', ( 'post_title' == $dff_params['sortby'] && 'desc' == $dff_params['sortorder'] ? 'asc' : 'desc' ) ); ?>">
-                    <span><?php _e( 'Post', 'draftsforfriends '); ?></span><span class="sorting-indicator"></span>
+                    <span><?php _e( 'Post', 'wp-draftsforfriends' ); ?></span><span class="sorting-indicator"></span>
                 </a>
             </th>
 
-            <th scope="col" width="25%" class="manage-column"><?php _e( 'Link', 'draftsforfriends '); ?></th>
+            <th scope="col" width="25%" class="manage-column"><?php _e( 'Link', 'wp-draftsforfriends' ); ?></th>
 
             <?php if( 'date_expired' == $dff_params['sortby'] ): ?>
                 <th scope="col" width="20%" class="manage-column sorted <?php echo $dff_params['sortorder']; ?>">
@@ -908,7 +984,7 @@ class WPDraftsForFriends {
                 <th scope="col" width="20%" class="manage-column sortable desc">
             <?php endif; ?>
                 <a href="<?php echo $this->generate_admin_url( 1, 'date_expired', ( 'date_expired' == $dff_params['sortby'] && 'desc' == $dff_params['sortorder'] ? 'asc' : 'desc' ) ); ?>">
-                    <span><?php _e( 'Expires After', 'draftsforfriends '); ?></span><span class="sorting-indicator"></span>
+                    <span><?php _e( 'Expires After', 'wp-draftsforfriends' ); ?></span><span class="sorting-indicator"></span>
                 </a>
             </th>
 
@@ -918,7 +994,7 @@ class WPDraftsForFriends {
                 <th scope="col" width="15%" class="manage-column sortable desc">
             <?php endif; ?>
                 <a href="<?php echo $this->generate_admin_url( 1, 'date_extended', ( 'date_extended' == $dff_params['sortby'] && 'desc' == $dff_params['sortorder'] ? 'asc' : 'desc' ) ); ?>">
-                    <span><?php _e( 'Last Date Extended', 'draftsforfriends '); ?></span><span class="sorting-indicator"></span>
+                    <span><?php _e( 'Last Date Extended', 'wp-draftsforfriends' ); ?></span><span class="sorting-indicator"></span>
                 </a>
             </th>
         </tr>
@@ -962,10 +1038,10 @@ class WPDraftsForFriends {
             $dff_page = ! empty( $_REQUEST['dff_page'] ) ? intval( $_REQUEST['dff_page'] ) : 1;
 
         if ( empty( $dff_sortby ) )
-            $dff_sortby = ! empty( $_REQUEST['dff_sortby'] ) ? $_REQUEST['dff_sortby'] : 'date_created';
+            $dff_sortby = ! empty( $_REQUEST['dff_sortby'] ) ? sanitize_key( wp_unslash( $_REQUEST['dff_sortby'] ) ) : 'date_created';
 
         if ( empty( $dff_sortorder ) )
-            $dff_sortorder = ! empty( $_REQUEST['dff_sortorder'] ) ? $_REQUEST['dff_sortorder'] : 'desc';
+            $dff_sortorder = ! empty( $_REQUEST['dff_sortorder'] ) ? sanitize_key( wp_unslash( $_REQUEST['dff_sortorder'] ) ) : 'desc';
 
         // Page
         if ( 0 < $dff_page )

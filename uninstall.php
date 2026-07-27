@@ -5,21 +5,6 @@
 if ( !defined( 'WP_UNINSTALL_PLUGIN' ) )
 	exit ();
 
-if ( is_multisite() ) {
-	$ms_sites = wp_get_sites();
-
-	if( 0 < sizeof( $ms_sites ) ) {
-		foreach ( $ms_sites as $ms_site ) {
-			switch_to_blog( $ms_site['blog_id'] );
-			plugin_uninstalled();
-		}
-	}
-
-	restore_current_blog();
-} else {
-	plugin_uninstalled();
-}
-
 /**
 * Delete plugin table when uninstalled
 *
@@ -31,4 +16,21 @@ function plugin_uninstalled() {
 
 	$draftsforfriends_table = $wpdb->prefix . 'draftsforfriends';
 	$wpdb->query( "DROP TABLE IF EXISTS $draftsforfriends_table" );
+}
+
+if ( is_multisite() ) {
+	// wp_get_sites() was removed in WP 5.1 and fatals here. get_sites() defaults
+	// 'number' to 100, so it must be lifted explicitly or the tables are left
+	// behind on every site past the hundredth with no error reported.
+	$site_ids = get_sites( array( 'fields' => 'ids', 'number' => 0 ) );
+
+	foreach ( $site_ids as $site_id ) {
+		switch_to_blog( (int) $site_id );
+		plugin_uninstalled();
+		// Inside the loop: switch_to_blog() pushes onto a stack, so one restore
+		// after the loop leaves it unwound by all but one.
+		restore_current_blog();
+	}
+} else {
+	plugin_uninstalled();
 }
