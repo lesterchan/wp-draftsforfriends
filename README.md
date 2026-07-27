@@ -39,6 +39,7 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 * The plugin now works when installed under a directory name other than `wp-draftsforfriends`
 * Dropped the jQuery dependency; the admin script is now plain JavaScript
 * Restructured the plugin into `includes/` with one class per file
+* Removed `img/receipt_share.png`, which was only ever used by the `icon32` admin markup WordPress dropped in 3.8
 
 ### 1.0.2
 * It now supports Multisite Network activation
