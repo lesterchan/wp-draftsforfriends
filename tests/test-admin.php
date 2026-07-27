@@ -82,11 +82,22 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		$_GET     = array();
 		$_REQUEST = array();
 
+		// The Settings API registry is a global that outlives a test, so a
+		// section registered by one test would otherwise still be there for the
+		// next one -- which is exactly what the "nothing to share" case asserts
+		// is absent.
+		unset( $GLOBALS['wp_settings_sections'][ DraftsForFriends_Admin::SLUG ] );
+		unset( $GLOBALS['wp_settings_fields'][ DraftsForFriends_Admin::SLUG ] );
+
 		parent::tear_down();
 	}
 
 	/**
 	 * Render the screen, collecting any diagnostics it raises.
+	 *
+	 * The screen is driven the way wp-admin drives it: the menu is registered,
+	 * the page's load hook fires -- which is where the add form's fields are
+	 * registered with the Settings API -- and only then does the page render.
 	 *
 	 * @param array $get Query arguments the request arrived with.
 	 * @return string The rendered markup.
@@ -101,6 +112,15 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		// notice there and nowhere else -- a gap in this fixture, not in the
 		// plugin.
 		$GLOBALS['hook_suffix'] = 'posts_page_' . DraftsForFriends_Admin::SLUG;
+		$GLOBALS['menu']        = array();
+		$GLOBALS['submenu']     = array();
+
+		// wp-admin/includes/menu.php fills this in on a real request, and
+		// add_submenu_page() reads it to decide the hook suffix it registers the
+		// load hook on. Without it the suffix comes out admin_page_ rather than
+		// posts_page_, and the load hook fired below would be one nothing is
+		// listening to.
+		$GLOBALS['admin_page_hooks']['edit.php'] = 'posts';
 
 		set_current_screen( 'edit' );
 
@@ -115,6 +135,11 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 
 		try {
 			$admin = new DraftsForFriends_Admin();
+			$admin->add_menu();
+
+			// Core's own hook name, hyphen and all, so it is not ours to rename.
+			// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores
+			do_action( 'load-' . $GLOBALS['hook_suffix'] );
 
 			ob_start();
 			$admin->render_page();
@@ -139,6 +164,57 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Currently Shared Drafts', $html );
 		$this->assertStringContainsString( 'wp-list-table', $html );
 		$this->assertStringContainsString( $share->hash, $html );
+	}
+
+	/**
+	 * The add form is registered with the Settings API rather than written out
+	 * by hand, and it is core that turns that registration into markup.
+	 */
+	public function test_add_form_comes_from_the_settings_api() {
+		global $wp_settings_sections, $wp_settings_fields;
+
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render();
+		$slug = DraftsForFriends_Admin::SLUG;
+
+		$this->assertArrayHasKey( DraftsForFriends_Admin::SECTION, $wp_settings_sections[ $slug ] );
+		$this->assertSame(
+			array( 'draftsforfriends-post-id', 'draftsforfriends-expires' ),
+			array_keys( $wp_settings_fields[ $slug ][ DraftsForFriends_Admin::SECTION ] )
+		);
+
+		// The wrapper do_settings_sections() emits, which the screen no longer
+		// writes itself.
+		$this->assertStringContainsString( '<table class="form-table" role="presentation">', $html );
+		$this->assertStringContainsString( '<h2>Share Draft with Friends</h2>', $html );
+
+		// label_for, resolved by do_settings_fields().
+		$this->assertStringContainsString( '<label for="draftsforfriends-post-id">Choose a draft:</label>', $html );
+		$this->assertStringContainsString( '<label for="draftsforfriends-expires">Share it for:</label>', $html );
+
+		// The controls the script reads are still where it looks for them.
+		$this->assertStringContainsString( 'id="draftsforfriends-add"', $html );
+		$this->assertStringContainsString( 'name="post_id"', $html );
+		$this->assertStringContainsString( 'name="expires"', $html );
+		$this->assertStringContainsString( 'name="measure"', $html );
+		$this->assertStringContainsString( '<optgroup label="Drafts:">', $html );
+	}
+
+	/**
+	 * With nothing to share, no section is registered and no form is shown.
+	 */
+	public function test_add_form_is_absent_with_nothing_to_share() {
+		global $wp_settings_sections;
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		$html = $this->render();
+
+		$this->assertArrayNotHasKey( DraftsForFriends_Admin::SLUG, (array) $wp_settings_sections );
+		$this->assertStringNotContainsString( 'id="draftsforfriends-add"', $html );
+		$this->assertStringNotContainsString( 'Share Draft with Friends', $html );
+		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'the list should still render' );
 	}
 
 	/**

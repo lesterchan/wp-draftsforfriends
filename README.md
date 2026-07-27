@@ -39,6 +39,7 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 * Fixed eleven strings never being translated because of a typo in the text domain
 * Fixed several PHP 8 warnings
 * The shared drafts list is now a standard WordPress list table, with sortable columns, standard pagination and a *Shared drafts per page* screen option
+* The *Share Draft with Friends* form is now registered with the Settings API, so its heading, form table and field labels come from `do_settings_sections()` rather than being written out by hand
 * The plugin now works when installed under a directory name other than `wp-draftsforfriends`
 * Dropped the jQuery dependency; the admin script is now plain JavaScript
 * Restructured the plugin into `includes/` with one class per file

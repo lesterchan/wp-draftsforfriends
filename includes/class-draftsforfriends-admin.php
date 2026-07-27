@@ -35,11 +35,28 @@ class DraftsForFriends_Admin {
 	const CAPABILITY = 'publish_posts';
 
 	/**
+	 * The Settings API section the add form's fields belong to.
+	 *
+	 * @var string
+	 */
+	const SECTION = 'draftsforfriends_share';
+
+	/**
 	 * The hook suffix add_submenu_page() returned.
 	 *
 	 * @var string
 	 */
 	private $hook_suffix = '';
+
+	/**
+	 * Posts the current user may share, grouped by status.
+	 *
+	 * Filled when the fields are registered, so the field callback does not
+	 * repeat the three queries the registration already ran.
+	 *
+	 * @var array
+	 */
+	private $groups = array();
 
 	/**
 	 * Register the hooks.
@@ -80,6 +97,7 @@ class DraftsForFriends_Admin {
 
 		if ( $this->hook_suffix ) {
 			add_action( 'load-' . $this->hook_suffix, array( $this, 'add_screen_options' ) );
+			add_action( 'load-' . $this->hook_suffix, array( $this, 'register_fields' ) );
 		}
 	}
 
@@ -100,6 +118,118 @@ class DraftsForFriends_Admin {
 				'option'  => 'draftsforfriends_per_page',
 			)
 		);
+	}
+
+	/**
+	 * Register the add form's section and fields with the Settings API.
+	 *
+	 * The form posts to admin-ajax.php rather than options.php, so there is no
+	 * setting to register and no settings_fields() call: what is wanted here is
+	 * the Settings API as a renderer, so the markup, the label wiring and the
+	 * form-table structure come from core rather than from this plugin.
+	 *
+	 * Nothing is registered when the user has no post to share, which is what
+	 * keeps the whole form off the screen -- render_page() shows the form only
+	 * when the section exists.
+	 *
+	 * @return void
+	 */
+	public function register_fields() {
+		$this->groups = DraftsForFriends_Shares::shareable_posts();
+
+		$total = 0;
+
+		foreach ( $this->groups as $group ) {
+			$total += $group['count'];
+		}
+
+		if ( ! $total ) {
+			return;
+		}
+
+		add_settings_section(
+			self::SECTION,
+			__( 'Share Draft with Friends', 'wp-draftsforfriends' ),
+			'__return_false',
+			self::SLUG
+		);
+
+		add_settings_field(
+			'draftsforfriends-post-id',
+			__( 'Choose a draft:', 'wp-draftsforfriends' ),
+			array( $this, 'render_post_field' ),
+			self::SLUG,
+			self::SECTION,
+			array( 'label_for' => 'draftsforfriends-post-id' )
+		);
+
+		add_settings_field(
+			'draftsforfriends-expires',
+			__( 'Share it for:', 'wp-draftsforfriends' ),
+			array( $this, 'render_duration_field' ),
+			self::SLUG,
+			self::SECTION,
+			array( 'label_for' => 'draftsforfriends-expires' )
+		);
+	}
+
+	/**
+	 * The draft picker.
+	 *
+	 * @param array $args Field arguments add_settings_field() was given.
+	 * @return void
+	 */
+	public function render_post_field( $args ) {
+		?>
+		<select name="post_id" id="<?php echo esc_attr( $args['label_for'] ); ?>">
+			<option value=""></option>
+			<?php foreach ( $this->groups as $group ) : ?>
+				<?php if ( ! $group['count'] ) : ?>
+					<?php continue; ?>
+				<?php endif; ?>
+				<optgroup label="<?php echo esc_attr( $group['label'] ); ?>">
+					<?php foreach ( $group['posts'] as $post ) : ?>
+						<?php if ( '' === trim( (string) $post->post_title ) ) : ?>
+							<?php continue; ?>
+						<?php endif; ?>
+						<option value="<?php echo esc_attr( $post->ID ); ?>"><?php echo esc_html( $post->post_title ); ?></option>
+					<?php endforeach; ?>
+				</optgroup>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * The duration, and the unit it is measured in.
+	 *
+	 * @param array $args Field arguments add_settings_field() was given.
+	 * @return void
+	 */
+	public function render_duration_field( $args ) {
+		?>
+		<input name="expires" id="<?php echo esc_attr( $args['label_for'] ); ?>" type="number" min="1" step="1" value="2" class="small-text" />
+		<select name="measure" id="draftsforfriends-measure">
+			<?php foreach ( self::measures() as $value => $label ) : ?>
+				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( 'h', $value ); ?>><?php echo esc_html( $label ); ?></option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Whether the add form's section was registered.
+	 *
+	 * Read back off the Settings API's own registry rather than tracked in a
+	 * property, so the screen cannot show a form for a section that is not
+	 * there, or hide one that is.
+	 *
+	 * @return bool
+	 */
+	private function has_share_section() {
+		global $wp_settings_sections;
+
+		return isset( $wp_settings_sections[ self::SLUG ][ self::SECTION ] );
 	}
 
 	/**
@@ -158,65 +288,15 @@ class DraftsForFriends_Admin {
 
 		$table = new DraftsForFriends_Table();
 		$table->prepare_items();
-
-		$groups      = DraftsForFriends_Shares::shareable_posts();
-		$has_posts   = false;
-		$total_posts = 0;
-
-		foreach ( $groups as $group ) {
-			$total_posts += $group['count'];
-		}
-
-		$has_posts = $total_posts > 0;
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Drafts for Friends', 'wp-draftsforfriends' ); ?></h1>
 
 			<div id="draftsforfriends-message" class="notice" style="display: none;"><p></p></div>
 
-			<?php if ( $has_posts ) : ?>
-				<h2><?php esc_html_e( 'Share Draft with Friends', 'wp-draftsforfriends' ); ?></h2>
+			<?php if ( $this->has_share_section() ) : ?>
 				<form id="draftsforfriends-add">
-					<table class="form-table" role="presentation">
-						<tbody>
-							<tr>
-								<th scope="row">
-									<label for="draftsforfriends-post-id"><?php esc_html_e( 'Choose a draft:', 'wp-draftsforfriends' ); ?></label>
-								</th>
-								<td>
-									<select name="post_id" id="draftsforfriends-post-id">
-										<option value=""></option>
-										<?php foreach ( $groups as $group ) : ?>
-											<?php if ( ! $group['count'] ) : ?>
-												<?php continue; ?>
-											<?php endif; ?>
-											<optgroup label="<?php echo esc_attr( $group['label'] ); ?>">
-												<?php foreach ( $group['posts'] as $post ) : ?>
-													<?php if ( '' === trim( (string) $post->post_title ) ) : ?>
-														<?php continue; ?>
-													<?php endif; ?>
-													<option value="<?php echo esc_attr( $post->ID ); ?>"><?php echo esc_html( $post->post_title ); ?></option>
-												<?php endforeach; ?>
-											</optgroup>
-										<?php endforeach; ?>
-									</select>
-								</td>
-							</tr>
-							<tr>
-								<th scope="row">
-									<label for="draftsforfriends-expires"><?php esc_html_e( 'Share it for:', 'wp-draftsforfriends' ); ?></label>
-								</th>
-								<td>
-									<input name="expires" id="draftsforfriends-expires" type="number" min="1" step="1" value="2" class="small-text" />
-									<select name="measure" id="draftsforfriends-measure">
-										<?php foreach ( self::measures() as $value => $label ) : ?>
-											<option value="<?php echo esc_attr( $value ); ?>" <?php selected( 'h', $value ); ?>><?php echo esc_html( $label ); ?></option>
-										<?php endforeach; ?>
-									</select>
-								</td>
-							</tr>
-						</tbody>
-					</table>
+					<?php do_settings_sections( self::SLUG ); ?>
 					<?php submit_button( __( 'Go', 'wp-draftsforfriends' ), 'primary', 'draftsforfriends_submit', true, array( 'id' => 'draftsforfriends-submit' ) ); ?>
 				</form>
 			<?php endif; ?>
