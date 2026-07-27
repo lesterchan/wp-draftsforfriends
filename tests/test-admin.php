@@ -95,6 +95,13 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		$_GET     = $get;
 		$_REQUEST = $get;
 
+		// A real admin request always has $hook_suffix set by the time a screen
+		// renders, and WP_List_Table reaches for it through WP_Screen. WordPress
+		// 6.0 reads it without an isset() guard, so leaving it unset raised a
+		// notice there and nowhere else -- a gap in this fixture, not in the
+		// plugin.
+		$GLOBALS['hook_suffix'] = 'posts_page_' . DraftsForFriends_Admin::SLUG;
+
 		set_current_screen( 'edit' );
 
 		$this->notices = array();
