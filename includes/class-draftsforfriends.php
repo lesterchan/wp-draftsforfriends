@@ -89,14 +89,40 @@ class DraftsForFriends {
 
 		new DraftsForFriends_Preview();
 
+		// Registered unconditionally, and pointed at a loader rather than at the
+		// admin class: wp_ajax_* only ever fires from admin-ajax.php, so there is
+		// nothing to gate, and gating it on is_admin() made the endpoint depend on
+		// whether WP_ADMIN happened to be defined by the time plugins_loaded ran.
+		add_action( 'wp_ajax_draftsforfriends_admin', array( $this, 'ajax' ) );
+
 		// The list table pulls in wp-admin/includes/class-wp-list-table.php, so
 		// neither it nor the admin screen is loaded on front-end requests.
 		if ( is_admin() ) {
-			require_once __DIR__ . '/class-draftsforfriends-table.php';
-			require_once __DIR__ . '/class-draftsforfriends-admin.php';
+			$this->load_admin();
 
 			new DraftsForFriends_Admin();
 		}
+	}
+
+	/**
+	 * Load the admin-only classes.
+	 *
+	 * @return void
+	 */
+	private function load_admin() {
+		require_once __DIR__ . '/class-draftsforfriends-table.php';
+		require_once __DIR__ . '/class-draftsforfriends-admin.php';
+	}
+
+	/**
+	 * Handle the screen's endpoint, loading the admin classes on demand.
+	 *
+	 * @return void
+	 */
+	public function ajax() {
+		$this->load_admin();
+
+		DraftsForFriends_Admin::ajax();
 	}
 
 	/**

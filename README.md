@@ -25,7 +25,7 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 ## Changelog
 
 ### 2.0.0
-* **IMPORTANT:** The admin screen has moved from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `edit.php?page=draftsforfriends`. Update any bookmark you have; the menu entry under *Posts* is unchanged. Links you have already sent to friends are **not** affected.
+* **IMPORTANT:** The admin screen has moved from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `admin.php?page=draftsforfriends`. Update any bookmark you have; the menu entry under *Posts* is unchanged. Links you have already sent to friends are **not** affected.
 * **IMPORTANT:** Requires WordPress 6.0 and PHP 7.4 or later.
 * **IMPORTANT:** The screen now requires JavaScript. The parallel non-JavaScript form handling has been removed.
 * Fixed a bug where a shared draft could appear in places it was not shared to. Once one valid preview link had been opened, the post was re-used for every later query in that same request that returned nothing of its own, including requests carrying a wrong, expired or deleted link
@@ -81,7 +81,7 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 ## Frequently Asked Questions
 
 ### My bookmark to the Drafts for Friends page stopped working
-The screen moved to `edit.php?page=draftsforfriends` in 2.0.0. It used to be addressed by the plugin's own file name, which meant the page URL changed if you ever renamed the plugin folder. Reach it from *Posts -> Drafts for Friends* and re-bookmark it.
+The screen moved to `admin.php?page=draftsforfriends` in 2.0.0. It used to be addressed by the plugin's own file name, which meant the page URL changed if you ever renamed the plugin folder. Reach it from *Posts -> Drafts for Friends* and re-bookmark it.
 
 Links you have already given to friends are unaffected. Those point at the post itself and do not go through the admin screen.
 
@@ -102,4 +102,4 @@ No. That is the point of the plugin: the link works for a logged-out visitor, an
 ## Upgrade Notice
 
 ### 2.0.0
-Fixes a bug where a shared draft could show up in places it was not shared to. The admin screen has moved to `edit.php?page=draftsforfriends` and now requires JavaScript, WordPress 6.0 and PHP 7.4. Links already sent to friends keep working.
+Fixes a bug where a shared draft could show up in places it was not shared to. The admin screen has moved to `admin.php?page=draftsforfriends` and now requires JavaScript, WordPress 6.0 and PHP 7.4. Links already sent to friends keep working.

@@ -47,7 +47,6 @@ class DraftsForFriends_Admin {
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
-		add_action( 'wp_ajax_draftsforfriends_admin', array( $this, 'ajax' ) );
 	}
 
 	/**
@@ -233,7 +232,7 @@ class DraftsForFriends_Admin {
 	 *
 	 * @return void
 	 */
-	public function ajax() {
+	public static function ajax() {
 		// Gate the endpoint before any request data is read. The per-post checks
 		// in DraftsForFriends_Shares stay: this is the coarse "may you use this
 		// screen at all" test.
@@ -256,7 +255,7 @@ class DraftsForFriends_Admin {
 					wp_send_json( $nonce_error );
 				}
 
-				wp_send_json( $this->with_row( DraftsForFriends_Shares::create( $post_id, $expires, $measure ) ) );
+				wp_send_json( self::with_row( DraftsForFriends_Shares::create( $post_id, $expires, $measure ) ) );
 				break;
 
 			case 'extend':
@@ -264,7 +263,7 @@ class DraftsForFriends_Admin {
 					wp_send_json( $nonce_error );
 				}
 
-				wp_send_json( $this->with_row( DraftsForFriends_Shares::extend( $id, $expires, $measure ) ) );
+				wp_send_json( self::with_row( DraftsForFriends_Shares::extend( $id, $expires, $measure ) ) );
 				break;
 
 			case 'delete':
@@ -272,7 +271,7 @@ class DraftsForFriends_Admin {
 					wp_send_json( $nonce_error );
 				}
 
-				wp_send_json( $this->with_count( DraftsForFriends_Shares::delete( $id ) ) );
+				wp_send_json( self::with_count( DraftsForFriends_Shares::delete( $id ) ) );
 				break;
 		}
 
@@ -285,14 +284,14 @@ class DraftsForFriends_Admin {
 	 * @param array $result Result from DraftsForFriends_Shares.
 	 * @return array
 	 */
-	private function with_row( array $result ) {
+	private static function with_row( array $result ) {
 		if ( empty( $result['success'] ) ) {
 			return $result;
 		}
 
 		$result['html'] = DraftsForFriends_Table::render_row( isset( $result['shared'] ) ? $result['shared'] : null );
 
-		return $this->with_count( $result );
+		return self::with_count( $result );
 	}
 
 	/**
@@ -303,7 +302,7 @@ class DraftsForFriends_Admin {
 	 * @param array $result Result from DraftsForFriends_Shares.
 	 * @return array
 	 */
-	private function with_count( array $result ) {
+	private static function with_count( array $result ) {
 		if ( empty( $result['success'] ) ) {
 			return $result;
 		}

@@ -87,4 +87,13 @@
 	<rule ref="WordPress.DateTime.CurrentTimeTimestamp">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
+
+	<!--
+		The admin screen test installs an error handler so it can assert the page
+		rendered without raising any diagnostics, which is what makes it worth more
+		than a smoke test. It is restored in a finally block.
+	-->
+	<rule ref="WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
 </ruleset>
