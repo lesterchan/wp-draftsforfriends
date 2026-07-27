@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<ruleset name="WP-DraftsForFriends">
+	<description>WordPress Coding Standards for WP-DraftsForFriends.</description>
+
+	<!--
+		PHP only. WPCS has had no JavaScript sniffs since 3.0, so scanning .js
+		here would only apply PHP_CodeSniffer's own PEAR/Squiz *PHP* conventions
+		to JavaScript through a tokenizer that PHP_CodeSniffer 4.0 removes
+		outright. JavaScript is linted with ESLint instead.
+	-->
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<file>.</file>
+
+	<!--
+		Dependency trees. Without these the scan walks every installed package
+		and runs the runner out of memory.
+	-->
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+
+	<rule ref="WordPress"/>
+
+	<config name="text_domain" value="wp-draftsforfriends"/>
+	<config name="minimum_wp_version" value="6.0"/>
+
+	<!--
+		The plugin owns the draftsforfriends table, so every read and write is by
+		definition a direct query with nothing to cache and no core API to use.
+	-->
+	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<severity>0</severity>
+	</rule>
+
+	<!--
+		Table names are identifiers built from $wpdb->prefix and a literal, with
+		no user input. Identifiers cannot be bound, and the %i placeholder needs
+		WordPress 6.2 while this plugin supports 6.0.
+
+		The ORDER BY column and direction in DraftsForFriends_Shares::query() are
+		likewise identifiers, and both are constrained to a literal from
+		self::SORTABLE and to ASC or DESC before they reach the query.
+	-->
+	<rule ref="WordPress.DB.PreparedSQL.InterpolatedNotPrepared">
+		<severity>0</severity>
+	</rule>
+
+	<!--
+		Creating and dropping the plugin's own table is the entire job of these
+		two files.
+	-->
+	<rule ref="WordPress.DB.DirectDatabaseQuery.SchemaChange">
+		<exclude-pattern>uninstall\.php</exclude-pattern>
+		<exclude-pattern>includes/class-draftsforfriends\.php</exclude-pattern>
+	</rule>
+
+	<!--
+		Both files read request data only to decide what to render, and write
+		nothing. The preview class is reached by logged-out visitors following a
+		link, where the hash in the URL is the credential and there is no form to
+		carry a nonce; the list table reads orderby, order and paged.
+
+		The write paths are in class-draftsforfriends-admin.php, which is not
+		excluded here and does verify a nonce on every branch.
+	-->
+	<rule ref="WordPress.Security.NonceVerification">
+		<exclude-pattern>includes/class-draftsforfriends-preview\.php</exclude-pattern>
+		<exclude-pattern>includes/class-draftsforfriends-table\.php</exclude-pattern>
+	</rule>
+
+	<!--
+		Tests drive the plugin's own entry points directly: they build the
+		superglobals a request would have arrived with and assert on rendered
+		markup.
+	-->
+	<rule ref="WordPress.Security.EscapeOutput">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Security.NonceVerification">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.DateTime.CurrentTimeTimestamp">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+</ruleset>

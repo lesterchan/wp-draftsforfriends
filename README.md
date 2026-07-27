@@ -1,12 +1,13 @@
 # WP-DraftsForFriends
 Contributors: GamerZ  
-Donate link: http://lesterchan.net/site/donation/  
-Tags: friends, preview, drafts, send, drafts for friends, share draft, send draft  
-Requires at least: 3.7  
-Tested up to: 6.3  
-Stable tag: trunk  
+Donate link: https://lesterchan.net/site/donation/  
+Tags: friends, preview, drafts, send, share draft  
+Requires at least: 6.0  
+Tested up to: 7.0  
+Stable tag: 2.0.0  
+Requires PHP: 7.4  
 License: GPLv2 or later  
-License URI: http://www.gnu.org/licenses/gpl-2.0.html  
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Now you don't need to add friends as users to the blog in order to let them preview your drafts
 
@@ -15,27 +16,37 @@ This plugin will generate a unique link that you can send to your friends to all
 
 Modified from Drafts for Friends originally by Neville Longbottom.
 
-### Build Status
-[![Build Status](https://travis-ci.org/lesterchan/wp-draftsforfriends.svg?branch=master)](https://travis-ci.org/lesterchan/wp-draftsforfriends)
-
 ### Development
 * [https://github.com/lesterchan/wp-draftsforfriends](https://github.com/lesterchan/wp-draftsforfriends "https://github.com/lesterchan/wp-draftsforfriends")
-
-### Credits
-* Plugin icon by [Freepik](http://www.freepik.com) from [Flaticon](http://www.flaticon.com)
 
 ### Donations
 I spent most of my free time creating, updating, maintaining and supporting these plugins, if you really love my plugins and could spare me a couple of bucks, I will really appreciate it. If not feel free to use it without any obligations.
 
 ## Changelog
 
-### Version 1.0.2
+### 2.0.0
+* **IMPORTANT:** The admin screen has moved from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `edit.php?page=draftsforfriends`. Update any bookmark you have; the menu entry under *Posts* is unchanged. Links you have already sent to friends are **not** affected.
+* **IMPORTANT:** Requires WordPress 6.0 and PHP 7.4 or later.
+* **IMPORTANT:** The screen now requires JavaScript. The parallel non-JavaScript form handling has been removed.
+* Fixed a bug where a shared draft could appear in places it was not shared to. Once one valid preview link had been opened, the post was re-used for every later query in that same request that returned nothing of its own, including requests carrying a wrong, expired or deleted link
+* Fixed the post title being output unescaped on the admin screen
+* Fixed activation and uninstall fatally erroring on Multisite, which called a function removed in WordPress 5.1
+* Fixed Multisite activation and uninstall skipping every site past the hundredth
+* Fixed extending and deleting checking permissions against a post supplied with the request rather than the one the shared draft actually points at
+* Fixed eleven strings never being translated because of a typo in the text domain
+* Fixed several PHP 8 warnings
+* The shared drafts list is now a standard WordPress list table, with sortable columns, standard pagination and a *Shared drafts per page* screen option
+* The plugin now works when installed under a directory name other than `wp-draftsforfriends`
+* Dropped the jQuery dependency; the admin script is now plain JavaScript
+* Restructured the plugin into `includes/` with one class per file
+
+### 1.0.2
 * It now supports Multisite Network activation
 
-### Version 1.0.1
+### 1.0.1
 * Extend shared drafts is now works
 
-### Version 1.0.0
+### 1.0.0
 * Uses it's own table "wp_draftsforfriends" instead of relying on the "shared" field in wp_options
 * New "Date Created", "Date Extended" and "Expires After" column
 * Pagination of shared drafts is now supported
@@ -69,8 +80,26 @@ I spent most of my free time creating, updating, maintaining and supporting thes
 
 ## Frequently Asked Questions
 
-Coming soon ...
+### My bookmark to the Drafts for Friends page stopped working
+The screen moved to `edit.php?page=draftsforfriends` in 2.0.0. It used to be addressed by the plugin's own file name, which meant the page URL changed if you ever renamed the plugin folder. Reach it from *Posts -> Drafts for Friends* and re-bookmark it.
+
+Links you have already given to friends are unaffected. Those point at the post itself and do not go through the admin screen.
+
+### A friend says the link shows "Page not found"
+The link has expired, or it has been deleted. Open *Posts -> Drafts for Friends* and check the *Expires After* column: an expired share reads `Expired`. Use *Extend* on that row to give it more time, and the same link starts working again.
+
+The link also stops working once the post is published, at which point the post is public and the link is no longer needed.
+
+### Who can see which shared drafts?
+Anyone with the `edit_others_posts` capability — administrators and editors — sees every shared draft on the site and can share any unpublished post. Authors and contributors see only their own, and can only share posts they are allowed to edit.
+
+### Can my friend leave a comment on the draft?
+No. Comments are forced closed on a shared draft.
+
+### Does the friend need an account?
+No. That is the point of the plugin: the link works for a logged-out visitor, and only for the post it was issued for, and only until it expires.
 
 ## Upgrade Notice
 
-N/A
+### 2.0.0
+Fixes a bug where a shared draft could show up in places it was not shared to. The admin screen has moved to `edit.php?page=draftsforfriends` and now requires JavaScript, WordPress 6.0 and PHP 7.4. Links already sent to friends keep working.

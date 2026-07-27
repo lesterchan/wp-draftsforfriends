@@ -1,41 +1,57 @@
-#icon-draftsforfriends {
-	background: transparent url( '../img/receipt_share.png' ) no-repeat;
+/*
+ * WP-DraftsForFriends admin screen.
+ *
+ * The no-js rules are gone as of 2.0.0 along with the parallel non-JavaScript
+ * request handling they styled, and the #icon-draftsforfriends rule went with
+ * the icon32 markup WordPress dropped in 3.8.
+ */
+
+.wp-list-table.shared-drafts .column-id {
+	width: 5%;
 }
 
-.draftsforfriends .collapsed {
-	display: inline;
+.wp-list-table.shared-drafts .column-date_created,
+.wp-list-table.shared-drafts .column-date_extended {
+	width: 15%;
 }
-.draftsforfriends .expanded {
+
+.wp-list-table.shared-drafts .column-post_title,
+.wp-list-table.shared-drafts .column-date_expired {
+	width: 20%;
+}
+
+.wp-list-table.shared-drafts .column-link {
+	width: 25%;
+}
+
+/* The inline extend controls are hidden until the row's Extend link is used. */
+.wp-list-table.shared-drafts .draftsforfriends-extend-form {
 	display: none;
-}
-.draftsforfriends .row-actions {
 	margin: 5px 0;
 }
-.draftsforfriends tr:nth-child( odd ) {
-	background-color: #fcfcfc;
+
+.wp-list-table.shared-drafts tr.draftsforfriends-expanded .draftsforfriends-extend-form {
+	display: block;
+}
+
+.wp-list-table.shared-drafts .row-actions .expanded {
+	display: none;
+}
+
+.wp-list-table.shared-drafts tr.draftsforfriends-expanded .row-actions .collapsed {
+	display: none;
+}
+
+.wp-list-table.shared-drafts tr.draftsforfriends-expanded .row-actions .expanded {
+	display: inline;
+}
+
+/* Keep the actions visible while the row is expanded, not only on hover. */
+.wp-list-table.shared-drafts tr.draftsforfriends-expanded .row-actions {
+	visibility: visible;
+	position: static;
 }
 
 #draftsforfriends-message {
-	padding: 10px;
-}
-#draftsforfriends-message.error {
-	color: red;
-}
-#draftsforfriends-message.success {
-	color: green;
-}
-
-/* For No JS */
-.no-js-trash {
-	display: none;
-}
-.no-js .draftsforfriends-extend-form .no-js-trash {
-	display: inline;
-}
-.no-js .draftsforfriends .draftsforfriends-extend-form {
-	display: block;
-	visibility: hidden;
-}
-.no-js .draftsforfriends tr:hover .draftsforfriends-extend-form {
-	visibility: visible;
+	margin: 5px 0 15px;
 }
