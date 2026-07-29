@@ -314,7 +314,13 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	}
 
 	/**
-	 * The share link.
+	 * The share link, and a button to copy it.
+	 *
+	 * Copying is the one thing anybody actually does with this column -- the
+	 * point of the plugin is to send the link to somebody -- and it is the only
+	 * control on the screen that changes nothing, so it is also the only one that
+	 * may be a script-only affordance. hide-if-no-js keeps it off the page where
+	 * the script has not run, leaving the link itself to be selected by hand.
 	 *
 	 * @param object $item Share row.
 	 * @return string
@@ -322,7 +328,12 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	public function column_link( $item ) {
 		$url = WP_DraftsForFriends_Shares::url( $item );
 
-		return sprintf( '<a href="%1$s">%2$s</a>', esc_url( $url ), esc_html( $url ) );
+		return sprintf(
+			'<a href="%1$s">%2$s</a> <button type="button" class="button hide-if-no-js draftsforfriends-copy" data-link="%1$s">%3$s</button>',
+			esc_url( $url ),
+			esc_html( $url ),
+			esc_html__( 'Copy link', 'wp-draftsforfriends' )
+		);
 	}
 
 	/**

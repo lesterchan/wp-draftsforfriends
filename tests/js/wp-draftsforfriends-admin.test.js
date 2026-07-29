@@ -1,45 +1,71 @@
 /**
  * The admin script.
  *
- * Tests the contract the PHP side depends on -- the field names posted to
- * admin-ajax.php and what the script does with the response -- rather than the
- * implementation.
+ * Everything here is progressive enhancement, so the contract under test is
+ * narrow: does the script let a submission through, and does it stop one it
+ * should stop. A test that asserts a form was submitted would be asserting
+ * jsdom's behaviour rather than the plugin's, so submissions are driven with a
+ * cancelable event and judged by whether defaultPrevented came back true.
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bodyOf, l10n, loadScript, rowMarkup, screenMarkup } from './helper-dom.js';
+import {
+	l10n,
+	loadScript,
+	noticeClass,
+	noticeText,
+	rowMarkup,
+	screenMarkup,
+} from './helper-dom.js';
 
 /**
- * Resolve fetch with a plugin response body.
+ * Fire a cancelable submit at a form and report whether it was blocked.
  *
- * @param {Object} payload The decoded response.
+ * jsdom does not implement form submission, so dispatching the event directly is
+ * both closer to what the script sees and quieter than clicking a button.
+ *
+ * @param {string} id Form element id.
+ * @return {boolean} Whether the script prevented the submission.
  */
-function respondWith( payload ) {
-	global.fetch.mockResolvedValueOnce( {
-		json: async () => payload,
+function submit( id ) {
+	const event = new window.Event( 'submit', {
+		bubbles: true,
+		cancelable: true,
 	} );
+
+	document.getElementById( id ).dispatchEvent( event );
+
+	return event.defaultPrevented;
 }
 
 /**
- * Let the pending promise chain settle.
+ * Choose a bulk action in one of the two dropdowns.
+ *
+ * @param {string} value Action value.
+ * @param {string} which Either 'top' or 'bottom'.
+ */
+function chooseBulkAction( value, which = 'top' ) {
+	document.getElementById( 'bulk-action-selector-' + which ).value = value;
+}
+
+/**
+ * Tick a row's checkbox.
+ *
+ * @param {number} id Share id.
+ */
+function tick( id ) {
+	document.getElementById( 'cb-select-' + id ).checked = true;
+}
+
+/**
+ * Let a pending promise chain settle.
  */
 async function settle() {
 	await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
 }
 
-/**
- * The banner text currently on screen.
- *
- * @return {string} The message.
- */
-function message() {
-	return document
-		.getElementById( 'draftsforfriends-message' )
-		.querySelector( 'p' ).textContent;
-}
-
-describe( 'draftsforfriends-admin', () => {
+describe( 'wp-draftsforfriends-admin', () => {
 	beforeAll( () => {
-		window.draftsForFriendsAdminL10n = l10n();
+		window.wpDraftsForFriendsL10n = l10n();
 
 		// Once only: the listeners live on document, so a second evaluation would
 		// attach a second set and every handler would fire twice.
@@ -47,301 +73,260 @@ describe( 'draftsforfriends-admin', () => {
 	} );
 
 	beforeEach( () => {
-		global.fetch = vi.fn();
 		window.confirm = vi.fn( () => true );
 
 		// The listeners survive this, which is why the script is not reloaded.
-		document.body.innerHTML = screenMarkup( [ { id: 7, title: 'A Draft' } ] );
+		document.body.innerHTML = screenMarkup( [
+			{ id: 7, title: 'A Draft' },
+			{ id: 9, title: 'Another Draft' },
+		] );
 	} );
 
-	describe( 'adding a share', () => {
-		it( 'posts the field names the endpoint reads', async () => {
-			respondWith( { success: 'Created', html: rowMarkup( { id: 8, title: 'New' } ), countText: '2 items' } );
+	describe( 'the add form', () => {
+		it( 'lets a complete submission through untouched', () => {
+			document.getElementById( 'draftsforfriends-post-id' ).value = '4';
 
-			document.querySelector( '[name="post_id"]' ).value = '4';
-			document.getElementById( 'draftsforfriends-add' ).dispatchEvent(
-				new window.Event( 'submit', { bubbles: true, cancelable: true } ),
-			);
-
-			await settle();
-
-			expect( global.fetch ).toHaveBeenCalledTimes( 1 );
-
-			const [ url, init ] = global.fetch.mock.calls[ 0 ];
-
-			expect( url ).toBe( l10n().ajaxUrl );
-			expect( init.method ).toBe( 'POST' );
-			expect( init.credentials ).toBe( 'same-origin' );
-
-			// These keys are read straight out of $_POST on the PHP side.
-			expect( bodyOf( global.fetch ) ).toEqual( {
-				action: 'draftsforfriends_admin',
-				do: 'add',
-				post_id: '4',
-				expires: '2',
-				measure: 'h',
-				_ajax_nonce: 'add-nonce',
-			} );
+			expect( submit( 'draftsforfriends-add' ) ).toBe( false );
+			expect( noticeText() ).toBe( '' );
 		} );
 
-		it( 'prepends the returned row and updates the count', async () => {
-			respondWith( { success: 'Created', html: rowMarkup( { id: 8, title: 'New' } ), countText: '2 items' } );
+		it( 'blocks a submission with no draft chosen', () => {
+			document.getElementById( 'draftsforfriends-post-id' ).value = '';
 
-			document.querySelector( '[name="post_id"]' ).value = '4';
-			document.getElementById( 'draftsforfriends-add' ).dispatchEvent(
-				new window.Event( 'submit', { bubbles: true, cancelable: true } ),
-			);
-
-			await settle();
-
-			const rows = document.querySelectorAll( 'tbody tr' );
-
-			expect( rows.length ).toBe( 2 );
-			expect( rows[ 0 ].id ).toBe( 'draftsforfriends-current-8' );
-			expect( document.querySelector( '.displaying-num' ).textContent ).toBe( '2 items' );
-			expect( message() ).toBe( 'Created' );
+			expect( submit( 'draftsforfriends-add' ) ).toBe( true );
+			expect( noticeText() ).toBe( l10n().errorPostId );
+			expect( noticeClass() ).toContain( 'notice-error' );
 		} );
 
-		it( 'removes the no-items row when the first share is added', async () => {
-			document.body.innerHTML = screenMarkup( [] );
+		it( 'blocks a submission with a zero duration', () => {
+			document.getElementById( 'draftsforfriends-post-id' ).value = '4';
+			document.getElementById( 'draftsforfriends-expires' ).value = '0';
 
-			expect( document.querySelector( 'tr.no-items' ) ).not.toBeNull();
-
-			respondWith( { success: 'Created', html: rowMarkup( { id: 8, title: 'New' } ), countText: '1 item' } );
-
-			document.querySelector( '[name="post_id"]' ).value = '4';
-			document.getElementById( 'draftsforfriends-add' ).dispatchEvent(
-				new window.Event( 'submit', { bubbles: true, cancelable: true } ),
-			);
-
-			await settle();
-
-			expect( document.querySelector( 'tr.no-items' ) ).toBeNull();
-			expect( document.getElementById( 'draftsforfriends-current-8' ) ).not.toBeNull();
+			expect( submit( 'draftsforfriends-add' ) ).toBe( true );
+			expect( noticeText() ).toBe( l10n().errorExpires );
 		} );
 
-		it( 'refuses to post without a chosen draft', async () => {
-			document.querySelector( '[name="post_id"]' ).value = '';
-			document.getElementById( 'draftsforfriends-add' ).dispatchEvent(
-				new window.Event( 'submit', { bubbles: true, cancelable: true } ),
-			);
+		it( 'blocks a submission with a non-numeric duration', () => {
+			document.getElementById( 'draftsforfriends-post-id' ).value = '4';
+			document.getElementById( 'draftsforfriends-expires' ).value = 'soon';
 
-			await settle();
-
-			expect( global.fetch ).not.toHaveBeenCalled();
-			expect( message() ).toBe( l10n().errorPostId );
+			expect( submit( 'draftsforfriends-add' ) ).toBe( true );
+			expect( noticeText() ).toBe( l10n().errorExpires );
 		} );
 
-		it( 'refuses to post a non-positive duration', async () => {
-			document.querySelector( '[name="post_id"]' ).value = '4';
-			document.querySelector( '[name="expires"]' ).value = '0';
-			document.getElementById( 'draftsforfriends-add' ).dispatchEvent(
-				new window.Event( 'submit', { bubbles: true, cancelable: true } ),
-			);
+		it( 'puts its notice inside the wrap, just after the heading', () => {
+			document.getElementById( 'draftsforfriends-post-id' ).value = '';
 
-			await settle();
+			submit( 'draftsforfriends-add' );
 
-			expect( global.fetch ).not.toHaveBeenCalled();
-			expect( message() ).toBe( l10n().errorExpires );
+			const box = document.getElementById( 'draftsforfriends-notice' );
+
+			expect( box.previousElementSibling.tagName ).toBe( 'H1' );
+			expect( box.getAttribute( 'role' ) ).toBe( 'alert' );
 		} );
 
-		it( 'shows the server error and adds no row', async () => {
-			respondWith( { error: 'The post is published!' } );
+		it( 'reuses one notice element rather than stacking them', () => {
+			document.getElementById( 'draftsforfriends-post-id' ).value = '';
 
-			document.querySelector( '[name="post_id"]' ).value = '4';
-			document.getElementById( 'draftsforfriends-add' ).dispatchEvent(
-				new window.Event( 'submit', { bubbles: true, cancelable: true } ),
-			);
+			submit( 'draftsforfriends-add' );
+			submit( 'draftsforfriends-add' );
 
-			await settle();
-
-			expect( message() ).toBe( 'The post is published!' );
-			expect( document.querySelectorAll( 'tbody tr' ).length ).toBe( 1 );
+			expect(
+				document.querySelectorAll( '#draftsforfriends-notice' ),
+			).toHaveLength( 1 );
 		} );
 
-		it( 'reports a failed request', async () => {
-			global.fetch.mockRejectedValueOnce( new Error( 'offline' ) );
+		it( 'writes the message as text, never as markup', () => {
+			window.wpDraftsForFriendsL10n.errorPostId =
+				'<img src=x onerror=alert(1)>';
 
-			document.querySelector( '[name="post_id"]' ).value = '4';
-			document.getElementById( 'draftsforfriends-add' ).dispatchEvent(
-				new window.Event( 'submit', { bubbles: true, cancelable: true } ),
-			);
+			document.getElementById( 'draftsforfriends-post-id' ).value = '';
 
-			await settle();
+			submit( 'draftsforfriends-add' );
 
-			expect( message() ).toBe( l10n().errorRequest );
+			expect(
+				document.querySelectorAll( '#draftsforfriends-notice img' ),
+			).toHaveLength( 0 );
+
+			window.wpDraftsForFriendsL10n.errorPostId = l10n().errorPostId;
 		} );
 	} );
 
-	describe( 'expanding a row', () => {
-		it( 'toggles the row open and closed', () => {
-			const row = document.getElementById( 'draftsforfriends-current-7' );
-
-			expect( row.classList.contains( 'draftsforfriends-expanded' ) ).toBe( false );
-
-			document.querySelector( '.draftsforfriends-expand' ).click();
-			expect( row.classList.contains( 'draftsforfriends-expanded' ) ).toBe( true );
-
-			document.querySelector( '.draftsforfriends-collapse' ).click();
-			expect( row.classList.contains( 'draftsforfriends-expanded' ) ).toBe( false );
-		} );
-	} );
-
-	describe( 'extending a share', () => {
-		it( 'posts the row id, its own nonce and the row inputs', async () => {
-			respondWith( { success: 'Extended', html: rowMarkup( { id: 7, title: 'A Draft' } ) } );
-
-			document.querySelector( '.draftsforfriends-extend' ).click();
-
-			await settle();
-
-			expect( bodyOf( global.fetch ) ).toEqual( {
-				action: 'draftsforfriends_admin',
-				do: 'extend',
-				id: '7',
-				expires: '2',
-				measure: 'h',
-				_ajax_nonce: 'extend-7',
-			} );
+	describe( 'the bulk actions', () => {
+		it( 'ignores a form with no action chosen', () => {
+			expect( submit( 'draftsforfriends-list' ) ).toBe( false );
+			expect( noticeText() ).toBe( '' );
 		} );
 
-		it( 'replaces the row in place rather than duplicating it', async () => {
-			respondWith( { success: 'Extended', html: rowMarkup( { id: 7, title: 'A Draft' } ) } );
+		it( 'blocks extend with nothing ticked', () => {
+			chooseBulkAction( 'extend' );
 
-			document.querySelector( '.draftsforfriends-extend' ).click();
-
-			await settle();
-
-			expect( document.querySelectorAll( '#draftsforfriends-current-7' ).length ).toBe( 1 );
-			expect( document.querySelectorAll( 'tbody tr' ).length ).toBe( 1 );
-			expect( message() ).toBe( 'Extended' );
+			expect( submit( 'draftsforfriends-list' ) ).toBe( true );
+			expect( noticeText() ).toBe( l10n().errorSelect );
 		} );
 
-		it( 'refuses a non-positive duration', async () => {
-			document.querySelector( '.draftsforfriends-expires' ).value = '-1';
-			document.querySelector( '.draftsforfriends-extend' ).click();
+		it( 'blocks revoke with nothing ticked, without asking first', () => {
+			chooseBulkAction( 'revoke' );
 
-			await settle();
-
-			expect( global.fetch ).not.toHaveBeenCalled();
-			expect( message() ).toBe( l10n().errorExpires );
+			expect( submit( 'draftsforfriends-list' ) ).toBe( true );
+			expect( noticeText() ).toBe( l10n().errorSelect );
+			expect( window.confirm ).not.toHaveBeenCalled();
 		} );
-	} );
 
-	describe( 'deleting a share', () => {
-		it( 'asks first, naming the post', () => {
-			window.confirm = vi.fn( () => false );
+		it( 'lets extend through once a row is ticked, without confirming', () => {
+			chooseBulkAction( 'extend' );
+			tick( 7 );
 
-			document.querySelector( '.draftsforfriends-delete' ).click();
+			expect( submit( 'draftsforfriends-list' ) ).toBe( false );
+			expect( window.confirm ).not.toHaveBeenCalled();
+		} );
 
+		it( 'confirms before revoking', () => {
+			chooseBulkAction( 'revoke' );
+			tick( 7 );
+
+			expect( submit( 'draftsforfriends-list' ) ).toBe( false );
 			expect( window.confirm ).toHaveBeenCalledWith(
-				"Are you sure you want to delete this shared draft, 'A Draft'",
+				l10n().confirmRevoke,
 			);
-			expect( global.fetch ).not.toHaveBeenCalled();
 		} );
 
-		it( 'does nothing when the confirmation is declined', async () => {
+		it( 'abandons the revoke when the confirmation is declined', () => {
 			window.confirm = vi.fn( () => false );
 
-			document.querySelector( '.draftsforfriends-delete' ).click();
+			chooseBulkAction( 'revoke' );
+			tick( 7 );
 
-			await settle();
-
-			expect( document.getElementById( 'draftsforfriends-current-7' ) ).not.toBeNull();
+			expect( submit( 'draftsforfriends-list' ) ).toBe( true );
 		} );
 
-		it( 'posts the id and its own nonce, and no duration', async () => {
-			respondWith( { success: 'Deleted', countText: '0 items' } );
+		it( 'reads the bottom dropdown as well as the top one', () => {
+			chooseBulkAction( 'revoke', 'bottom' );
+			tick( 9 );
 
-			document.querySelector( '.draftsforfriends-delete' ).click();
-
-			await settle();
-
-			expect( bodyOf( global.fetch ) ).toEqual( {
-				action: 'draftsforfriends_admin',
-				do: 'delete',
-				id: '7',
-				_ajax_nonce: 'delete-7',
-			} );
+			expect( submit( 'draftsforfriends-list' ) ).toBe( false );
+			expect( window.confirm ).toHaveBeenCalled();
 		} );
 
-		it( 'removes the row and restores the no-items row', async () => {
-			respondWith( { success: 'Deleted', countText: '0 items' } );
+		it( 'leaves an unrecognised action to the server', () => {
+			const select = document.getElementById(
+				'bulk-action-selector-top',
+			);
+			const option = document.createElement( 'option' );
 
-			expect( document.getElementById( 'draftsforfriends-current-7' ) ).not.toBeNull();
+			option.value = 'incinerate';
+			select.appendChild( option );
+			select.value = 'incinerate';
 
-			document.querySelector( '.draftsforfriends-delete' ).click();
-
-			await settle();
-
-			expect( document.getElementById( 'draftsforfriends-current-7' ) ).toBeNull();
-
-			const empty = document.querySelector( 'tr.no-items' );
-
-			expect( empty ).not.toBeNull();
-			expect( empty.querySelector( 'td' ).getAttribute( 'colspan' ) ).toBe( '6' );
-			expect( empty.textContent.trim() ).toBe( 'No shared drafts!' );
-			expect( document.querySelector( '.displaying-num' ).textContent ).toBe( '0 items' );
-		} );
-
-		it( 'leaves the other rows alone', async () => {
-			document.body.innerHTML = screenMarkup( [
-				{ id: 7, title: 'A Draft' },
-				{ id: 9, title: 'Another' },
-			] );
-
-			respondWith( { success: 'Deleted', countText: '1 item' } );
-
-			document.querySelector( '.draftsforfriends-delete' ).click();
-
-			await settle();
-
-			expect( document.getElementById( 'draftsforfriends-current-7' ) ).toBeNull();
-			expect( document.getElementById( 'draftsforfriends-current-9' ) ).not.toBeNull();
-			expect( document.querySelector( 'tr.no-items' ) ).toBeNull();
-		} );
-
-		it( 'shows the server error and keeps the row', async () => {
-			respondWith( { error: 'Unable to verify nonce' } );
-
-			document.querySelector( '.draftsforfriends-delete' ).click();
-
-			await settle();
-
-			expect( message() ).toBe( 'Unable to verify nonce' );
-			expect( document.getElementById( 'draftsforfriends-current-7' ) ).not.toBeNull();
+			expect( submit( 'draftsforfriends-list' ) ).toBe( false );
+			expect( window.confirm ).not.toHaveBeenCalled();
 		} );
 	} );
 
-	describe( 'messages', () => {
-		it( 'renders as text, never as markup', async () => {
-			respondWith( { error: 'The post \'<b>bold</b>\' is published!' } );
+	describe( 'copying a share link', () => {
+		it( 'writes the row link to the clipboard', async () => {
+			const writeText = vi.fn( () => Promise.resolve() );
 
-			document.querySelector( '.draftsforfriends-delete' ).click();
+			Object.defineProperty( window.navigator, 'clipboard', {
+				value: { writeText },
+				configurable: true,
+			} );
+
+			document.querySelector( '.draftsforfriends-copy' ).click();
 
 			await settle();
 
-			const box = document.getElementById( 'draftsforfriends-message' );
-
-			expect( box.querySelector( 'b' ) ).toBeNull();
-			expect( message() ).toBe( "The post '<b>bold</b>' is published!" );
+			expect( writeText ).toHaveBeenCalledWith(
+				'https://example.test/?p=4&draftsforfriends=hash-7',
+			);
 		} );
 
-		it( 'switches between the success and error styles', async () => {
-			const box = document.getElementById( 'draftsforfriends-message' );
+		it( 'says so on the button, then puts the label back', async () => {
+			vi.useFakeTimers();
 
-			respondWith( { error: 'Nope' } );
-			document.querySelector( '.draftsforfriends-delete' ).click();
+			Object.defineProperty( window.navigator, 'clipboard', {
+				value: { writeText: () => Promise.resolve() },
+				configurable: true,
+			} );
+
+			const button = document.querySelector( '.draftsforfriends-copy' );
+
+			button.click();
+
+			await vi.advanceTimersByTimeAsync( 0 );
+
+			expect( button.textContent ).toBe( l10n().copied );
+
+			await vi.advanceTimersByTimeAsync( 2000 );
+
+			expect( button.textContent ).toBe( l10n().copy );
+
+			vi.useRealTimers();
+		} );
+
+		it( 'reports a clipboard the browser refused', async () => {
+			Object.defineProperty( window.navigator, 'clipboard', {
+				value: { writeText: () => Promise.reject( new Error( 'nope' ) ) },
+				configurable: true,
+			} );
+
+			document.querySelector( '.draftsforfriends-copy' ).click();
+
 			await settle();
 
-			expect( box.className ).toContain( 'notice-error' );
+			expect( noticeText() ).toBe( l10n().copyFailed );
+			expect( noticeClass() ).toContain( 'notice-error' );
+		} );
 
-			respondWith( { success: 'Deleted', countText: '0 items' } );
-			document.querySelector( '.draftsforfriends-delete' ).click();
+		it( 'reports a browser with no clipboard at all', () => {
+			Object.defineProperty( window.navigator, 'clipboard', {
+				value: undefined,
+				configurable: true,
+			} );
+
+			document.querySelector( '.draftsforfriends-copy' ).click();
+
+			expect( noticeText() ).toBe( l10n().copyFailed );
+		} );
+
+		it( 'copies the link belonging to the row that was clicked', async () => {
+			const writeText = vi.fn( () => Promise.resolve() );
+
+			Object.defineProperty( window.navigator, 'clipboard', {
+				value: { writeText },
+				configurable: true,
+			} );
+
+			document
+				.querySelectorAll( '.draftsforfriends-copy' )[ 1 ]
+				.click();
+
 			await settle();
 
-			expect( box.className ).toContain( 'notice-success' );
-			expect( box.className ).not.toContain( 'notice-error' );
+			expect( writeText ).toHaveBeenCalledWith(
+				'https://example.test/?p=4&draftsforfriends=hash-9',
+			);
+		} );
+	} );
+
+	describe( 'the script itself', () => {
+		it( 'uses no jQuery', () => {
+			// The PHP suite greps the file too; this asserts the running page,
+			// where a dependency built at load time would still show up.
+			expect( window.jQuery ).toBeUndefined();
+			expect( window.$ ).toBeUndefined();
+		} );
+
+		it( 'does nothing on a page it does not own', () => {
+			document.body.innerHTML = rowMarkup( { id: 3, title: 'Orphan' } );
+
+			expect( () =>
+				document.querySelector( '.draftsforfriends-copy' ).click(),
+			).not.toThrow();
+
+			expect(
+				document.getElementById( 'draftsforfriends-notice' ),
+			).toBeNull();
 		} );
 	} );
 } );
