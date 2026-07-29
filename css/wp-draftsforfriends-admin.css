@@ -1,9 +1,20 @@
 /*
  * WP-DraftsForFriends admin screen.
  *
- * The no-js rules are gone as of 2.0.0 along with the parallel non-JavaScript
- * request handling they styled, and the #icon-draftsforfriends rule went with
- * the icon32 markup WordPress dropped in 3.8.
+ * Everything the screen needs beyond core, which is not much: column widths for
+ * a table whose widest column holds a URL, somewhere to break that URL, and
+ * spacing for the two controls the plugin adds to core's tablenav.
+ *
+ * §5.1: no physical properties and therefore no second RTL sheet. §5: no
+ * font-family, font-size or colour is set anywhere, no hardcoded hex, no
+ * !important, and no transition to respect prefers-reduced-motion. There is no
+ * prefers-color-scheme block because the plugin paints no surface of its own --
+ * every element here is core's, wearing core's colours in both schemes.
+ *
+ * The rules that styled the inline extend controls, the expand/collapse row
+ * actions and the AJAX message banner are gone as of 2.0.0, along with all three
+ * of those things: extending is a bulk action now, and messages come through
+ * settings_errors().
  */
 
 .wp-list-table.shared-drafts .column-id {
@@ -24,34 +35,30 @@
 	width: 25%;
 }
 
-/* The inline extend controls are hidden until the row's Extend link is used. */
-.wp-list-table.shared-drafts .draftsforfriends-extend-form {
-	display: none;
-	margin: 5px 0;
+/*
+ * A share link is one long unbroken token, so it overflows its column on a
+ * narrow screen rather than wrapping. anywhere rather than break-all so the
+ * browser still prefers the few natural break points the URL has.
+ */
+.wp-list-table.shared-drafts .column-link a {
+	overflow-wrap: anywhere;
 }
 
-.wp-list-table.shared-drafts tr.draftsforfriends-expanded .draftsforfriends-extend-form {
-	display: block;
+/* The Copy link button sits after the link rather than under it. */
+.wp-list-table.shared-drafts .draftsforfriends-copy {
+	margin-block-start: 4px;
 }
 
-.wp-list-table.shared-drafts .row-actions .expanded {
-	display: none;
+/* The Extend duration and its unit, in core's tablenav actions area. */
+.tablenav .actions label[for="draftsforfriends-extend-expires"] {
+	margin-inline-end: 4px;
 }
 
-.wp-list-table.shared-drafts tr.draftsforfriends-expanded .row-actions .collapsed {
-	display: none;
+.tablenav .actions #draftsforfriends-extend-measure {
+	margin-inline-start: 4px;
 }
 
-.wp-list-table.shared-drafts tr.draftsforfriends-expanded .row-actions .expanded {
-	display: inline;
-}
-
-/* Keep the actions visible while the row is expanded, not only on hover. */
-.wp-list-table.shared-drafts tr.draftsforfriends-expanded .row-actions {
-	visibility: visible;
-	position: static;
-}
-
-#draftsforfriends-message {
-	margin: 5px 0 15px;
+/* The notice the script raises before a request is made. */
+#draftsforfriends-notice {
+	margin-block: 5px 15px;
 }
