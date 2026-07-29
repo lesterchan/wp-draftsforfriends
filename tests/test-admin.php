@@ -1,189 +1,51 @@
 <?php
 /**
- * The admin screen.
+ * The shared drafts screen.
  *
- * @package WP-DraftsForFriends
+ * @package wp-draftsforfriends
  */
 
 /**
- * WP_DraftsForFriends_Admin and the list table it renders.
+ * The menu, the screen and the markup it produces.
  */
-class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
+class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
-	/**
-	 * An author, who may only touch their own posts.
-	 *
-	 * @var int
-	 */
-	private $author_id;
+	public function test_the_screen_renders_cleanly_with_what_it_should_show() {
+		$share = $this->make_share( $this->author_id, $this->draft_id );
 
-	/**
-	 * An editor, who has edit_others_posts.
-	 *
-	 * @var int
-	 */
-	private $editor_id;
+		$html = $this->render_admin_page();
 
-	/**
-	 * The author's draft.
-	 *
-	 * @var int
-	 */
-	private $draft_id;
-
-	/**
-	 * The editor's draft.
-	 *
-	 * @var int
-	 */
-	private $editor_draft_id;
-
-	/**
-	 * Diagnostics raised while a screen rendered.
-	 *
-	 * @var array
-	 */
-	private $notices = array();
-
-	/**
-	 * Set up fixtures.
-	 */
-	public function set_up() {
-		parent::set_up();
-
-		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-list-table.php';
-		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-admin.php';
-
-		$this->author_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		$this->editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
-
-		$this->draft_id = self::factory()->post->create(
-			array(
-				'post_status' => 'draft',
-				'post_author' => $this->author_id,
-				// Carries HTML so the escaping assertions have something to bite on.
-				'post_title'  => 'Draft <b>Title</b> & "quoted"',
-			)
-		);
-
-		$this->editor_draft_id = self::factory()->post->create(
-			array(
-				'post_status' => 'draft',
-				'post_author' => $this->editor_id,
-				'post_title'  => 'Editor Draft',
-			)
-		);
-	}
-
-	/**
-	 * Clean up request state.
-	 */
-	public function tear_down() {
-		$_GET     = array();
-		$_REQUEST = array();
-
-		parent::tear_down();
-	}
-
-	/**
-	 * Render the screen, collecting any diagnostics it raises.
-	 *
-	 * The screen is driven the way wp-admin drives it: the menu is registered,
-	 * the page's load hook fires -- which is where the per-page screen option is
-	 * offered -- and only then does the page render.
-	 *
-	 * @param array $get Query arguments the request arrived with.
-	 * @return string The rendered markup.
-	 */
-	private function render( array $get = array() ) {
-		$_GET     = $get;
-		$_REQUEST = $get;
-
-		// A real admin request always has $hook_suffix set by the time a screen
-		// renders, and WP_List_Table reaches for it through WP_Screen. WordPress
-		// 6.0 reads it without an isset() guard, so leaving it unset raised a
-		// notice there and nowhere else -- a gap in this fixture, not in the
-		// plugin.
-		$GLOBALS['hook_suffix'] = 'posts_page_' . WP_DraftsForFriends_Admin::PAGE;
-		$GLOBALS['menu']        = array();
-		$GLOBALS['submenu']     = array();
-
-		// wp-admin/includes/menu.php fills this in on a real request, and
-		// add_submenu_page() reads it to decide the hook suffix it registers the
-		// load hook on. Without it the suffix comes out admin_page_ rather than
-		// posts_page_, and the load hook fired below would be one nothing is
-		// listening to.
-		$GLOBALS['admin_page_hooks']['edit.php'] = 'posts';
-
-		set_current_screen( 'edit' );
-
-		$this->notices = array();
-
-		set_error_handler(
-			function ( $errno, $errstr, $errfile, $errline ) {
-				$this->notices[] = $errstr . ' in ' . basename( $errfile ) . ':' . $errline;
-				return true;
-			}
-		);
-
-		try {
-			$admin = new WP_DraftsForFriends_Admin();
-			$admin->add_menu();
-
-			// Core's own hook name, hyphen and all, so it is not ours to rename.
-			// Assembled into a variable first because the sniff that objects to
-			// the hyphen only reads literal hook names, and a suppression is not
-			// allowed outside includes/.
-			$load_hook = 'load-' . $GLOBALS['hook_suffix'];
-
-			do_action( $load_hook );
-
-			ob_start();
-			$admin->render_page();
-
-			return (string) ob_get_clean();
-		} finally {
-			restore_error_handler();
-		}
-	}
-
-	/**
-	 * The screen renders, cleanly, with the things it is supposed to show.
-	 */
-	public function test_screen_renders() {
-		wp_set_current_user( $this->author_id );
-
-		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-		$html  = $this->render();
-
-		$this->assertSame( array(), $this->notices, 'the screen raised PHP diagnostics' );
+		$this->assertSame( array(), $this->admin_page_notices, 'the screen raised PHP diagnostics' );
 		$this->assertStringContainsString( 'Drafts for Friends', $html );
 		$this->assertStringContainsString( 'Currently Shared Drafts', $html );
 		$this->assertStringContainsString( 'wp-list-table', $html );
-		$this->assertStringContainsString( $share->hash, $html );
+		$this->assertStringContainsString( $share->hash, $html, 'the share link is missing' );
 	}
 
-	/**
-	 * The add form is the screen's own markup, and the Settings API is left for
-	 * the settings screen that actually saves a setting.
-	 */
-	public function test_add_form_is_the_screens_own_markup() {
+	public function test_the_screen_has_one_h1_and_no_inline_presentation_attributes() {
+		$this->make_share( $this->author_id, $this->draft_id );
+
+		$html = $this->render_admin_page();
+
+		$this->assertSame( 1, preg_match_all( '/<h1[ >]/', $html ), '§4.4 allows exactly one h1 per screen' );
+		$this->assertDoesNotMatchRegularExpression( '/<[a-z][^>]* style=/i', $html, '§4.4 forbids inline style attributes' );
+		$this->assertDoesNotMatchRegularExpression( '/<[a-z][^>]* (valign|align)=/i', $html, '§4.4 forbids valign and align attributes' );
+	}
+
+	public function test_the_add_form_is_the_screens_own_markup() {
 		global $wp_settings_sections, $wp_settings_fields;
 
 		wp_set_current_user( $this->author_id );
 
-		$html = $this->render();
-		$slug = WP_DraftsForFriends_Admin::PAGE;
+		$html = $this->render_admin_page();
+		$page = WP_DraftsForFriends_Admin::PAGE;
 
-		$this->assertArrayNotHasKey( $slug, (array) $wp_settings_sections, 'the shared drafts screen registered a settings section' );
-		$this->assertArrayNotHasKey( $slug, (array) $wp_settings_fields, 'the shared drafts screen registered a settings field' );
+		$this->assertArrayNotHasKey( $page, (array) $wp_settings_sections, 'the shared drafts screen registered a settings section' );
+		$this->assertArrayNotHasKey( $page, (array) $wp_settings_fields, 'the shared drafts screen registered a settings field' );
 
 		$this->assertStringContainsString( 'Share a Draft', $html );
 		$this->assertStringContainsString( '<label for="draftsforfriends-post-id">Choose a draft:</label>', $html );
 		$this->assertStringContainsString( '<label for="draftsforfriends-expires">Share it for:</label>', $html );
-
-		// The controls the script reads are still where it looks for them.
-		$this->assertStringContainsString( 'id="draftsforfriends-add"', $html );
 		$this->assertStringContainsString( 'name="post_id"', $html );
 		$this->assertStringContainsString( 'name="expires"', $html );
 		$this->assertStringContainsString( 'name="measure"', $html );
@@ -191,11 +53,17 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'value="' . $this->draft_id . '"', $html );
 	}
 
-	/**
-	 * The duration the form starts on is the stored setting, not a hardcoded two
-	 * hours as it was before 2.0.0.
-	 */
-	public function test_add_form_starts_on_the_configured_duration() {
+	public function test_the_add_form_carries_its_own_nonce() {
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render_admin_page();
+
+		$this->assertStringContainsString( 'id="draftsforfriends-add"', $html );
+		$this->assertStringContainsString( 'name="_wpnonce"', $html, 'the add form posts without a nonce field' );
+		$this->assertStringContainsString( 'name="draftsforfriends_add"', $html, 'the submit button does not identify the form' );
+	}
+
+	public function test_the_add_form_starts_on_the_configured_duration() {
 		wp_set_current_user( $this->author_id );
 
 		WP_DraftsForFriends_Options::update(
@@ -205,22 +73,26 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 			)
 		);
 
-		$html = $this->render();
+		$html = $this->render_admin_page();
 
 		$this->assertStringContainsString( 'id="draftsforfriends-expires" type="number" min="1" max="9999" step="1" value="5"', $html );
-		$this->assertMatchesRegularExpression( '/<option value="d" selected=/', $html, 'the configured unit is not preselected' );
+		$this->assertStringContainsString( '<option value="d" selected=', $html, 'the configured unit is not preselected' );
 	}
 
-	/**
-	 * Every control on the screen is labelled, including the unit dropdowns,
-	 * which carry no visible label of their own.
-	 */
-	public function test_every_control_is_labelled() {
-		wp_set_current_user( $this->author_id );
+	public function test_the_add_form_is_absent_with_nothing_to_share() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
 
-		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-		$html  = $this->render();
-		$id    = (int) $share->id;
+		$html = $this->render_admin_page();
+
+		$this->assertStringNotContainsString( 'id="draftsforfriends-add"', $html );
+		$this->assertStringNotContainsString( 'Share a Draft', $html );
+		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'the list should still render' );
+	}
+
+	public function test_every_control_on_the_screen_is_labelled() {
+		$this->make_share( $this->author_id, $this->draft_id );
+
+		$html = $this->render_admin_page();
 
 		$this->assertStringContainsString(
 			'<label class="screen-reader-text" for="draftsforfriends-measure">',
@@ -229,39 +101,28 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 		);
 
 		$this->assertStringContainsString(
-			'<label class="screen-reader-text" for="draftsforfriends-measure-' . $id . '">',
+			'<label class="screen-reader-text" for="draftsforfriends-extend-measure">',
 			$html,
-			'the row unit dropdown is unlabelled'
+			'the Extend unit dropdown is unlabelled'
 		);
 
-		// One row, one id: the per-row control cannot reuse the add form's.
-		$this->assertStringContainsString( 'id="draftsforfriends-measure-' . $id . '"', $html );
+		$this->assertStringContainsString(
+			'<label for="draftsforfriends-extend-expires">',
+			$html,
+			'the Extend duration input is unlabelled'
+		);
 
-		// The class the script selects on survived the id being added.
-		$this->assertStringContainsString( 'class="draftsforfriends-measure"', $html );
+		$this->assertStringContainsString(
+			'<label class="screen-reader-text" for="cb-select-',
+			$html,
+			'the row checkboxes are unlabelled'
+		);
 	}
 
-	/**
-	 * With nothing to share, no form is shown.
-	 */
-	public function test_add_form_is_absent_with_nothing_to_share() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+	public function test_the_screen_has_no_leaked_markup() {
+		$this->make_share( $this->author_id, $this->draft_id );
 
-		$html = $this->render();
-
-		$this->assertStringNotContainsString( 'id="draftsforfriends-add"', $html );
-		$this->assertStringNotContainsString( 'Share a Draft', $html );
-		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'the list should still render' );
-	}
-
-	/**
-	 * The damage no PHP-level tool reports.
-	 */
-	public function test_screen_has_no_leaked_markup() {
-		wp_set_current_user( $this->author_id );
-		WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
-
-		$html = $this->render();
+		$html = $this->render_admin_page();
 
 		$this->assertStringNotContainsString( '<?php', $html );
 		$this->assertStringNotContainsString( 'translators:', $html, 'a translators comment reached HTML context' );
@@ -269,40 +130,39 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'Fatal error', $html );
 	}
 
-	/**
-	 * The post title is escaped everywhere it appears.
-	 */
-	public function test_post_title_is_escaped() {
-		wp_set_current_user( $this->author_id );
-		WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
+	public function test_the_post_title_is_escaped_everywhere_it_appears() {
+		$this->make_share( $this->author_id, $this->draft_id );
 
-		$html = $this->render();
+		$html = $this->render_admin_page();
 
 		$this->assertStringNotContainsString( 'Draft <b>Title</b>', $html, 'a raw post title reached the page' );
 		$this->assertStringContainsString( 'Draft &lt;b&gt;Title&lt;/b&gt;', $html );
 	}
 
-	/**
-	 * An author sees their own shares and not anyone else's.
-	 */
-	public function test_list_is_scoped_by_capability() {
-		wp_set_current_user( $this->editor_id );
-		$editor_share = WP_DraftsForFriends_Shares::create( $this->editor_draft_id, 2, 'h' )['shared'];
+	public function test_the_list_is_scoped_by_capability() {
+		$editor_share = $this->make_share( $this->editor_id, $this->editor_draft_id );
+		$author_share = $this->make_share( $this->author_id, $this->draft_id );
 
-		wp_set_current_user( $this->author_id );
-		$author_share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-
-		$html = $this->render();
+		$html = $this->render_admin_page();
 
 		$this->assertStringContainsString( $author_share->hash, $html );
 		$this->assertStringNotContainsString( $editor_share->hash, $html, "the author's screen leaked the editor's share" );
 
 		wp_set_current_user( $this->editor_id );
 
-		$html = $this->render();
+		$html = $this->render_admin_page();
 
 		$this->assertStringContainsString( $author_share->hash, $html, 'an editor should see every share' );
 		$this->assertStringContainsString( $editor_share->hash, $html );
+	}
+
+	public function test_the_share_link_points_at_the_post() {
+		$share = $this->make_share( $this->author_id, $this->draft_id );
+
+		$html = $this->render_admin_page();
+
+		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html );
+		$this->assertStringContainsString( 'p=' . $this->draft_id, $html );
 	}
 
 	/**
@@ -313,12 +173,11 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 	 * @param array $get Query arguments.
 	 */
 	public function test_request_arguments_are_constrained( array $get ) {
-		wp_set_current_user( $this->author_id );
-		WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
+		$this->make_share( $this->author_id, $this->draft_id );
 
-		$html = $this->render( $get );
+		$html = $this->render_admin_page( $get );
 
-		$this->assertSame( array(), $this->notices );
+		$this->assertSame( array(), $this->admin_page_notices, 'the screen raised PHP diagnostics' );
 		$this->assertStringContainsString( 'Currently Shared Drafts', $html );
 		$this->assertStringNotContainsStringIgnoringCase( 'database error', $html );
 		$this->assertNotEmpty( get_post( $this->draft_id ), 'wp_posts survived' );
@@ -376,92 +235,144 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 		);
 	}
 
-	/**
-	 * The share link is rendered and points at the post.
-	 */
-	public function test_share_link_is_rendered() {
-		wp_set_current_user( $this->author_id );
-
-		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-		$html  = $this->render();
-
-		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html );
-		$this->assertStringContainsString( 'p=' . $this->draft_id, $html );
-	}
-
-	/**
-	 * The menu is registered under Posts, on a slug that does not name the
-	 * plugin's directory.
-	 */
-	public function test_menu_slug_does_not_embed_the_directory_name() {
-		global $submenu;
+	public function test_the_menu_is_one_top_level_entry_with_settings_last() {
+		global $menu, $submenu;
 
 		wp_set_current_user( $this->editor_id );
-		set_current_screen( 'edit' );
 
-		$submenu         = array();
-		$GLOBALS['menu'] = array();
+		$this->register_admin_menu();
 
-		$admin = new WP_DraftsForFriends_Admin();
-		$admin->add_menu();
+		$this->assertContains(
+			WP_DraftsForFriends_Admin::PAGE,
+			wp_list_pluck( (array) $menu, 2 ),
+			'§4.1 wants one top-level menu for a plugin with data-management screens'
+		);
 
-		$slugs = wp_list_pluck( (array) ( $submenu['edit.php'] ?? array() ), 2 );
+		$slugs = wp_list_pluck( (array) ( $submenu[ WP_DraftsForFriends_Admin::PAGE ] ?? array() ), 2 );
 
-		$this->assertContains( 'draftsforfriends', $slugs );
-		$this->assertStringNotContainsString( 'wp-draftsforfriends', implode( ' ', $slugs ), 'the menu slug still names the plugin directory' );
+		$this->assertSame(
+			array( WP_DraftsForFriends_Admin::PAGE, WP_DraftsForFriends_Settings::PAGE ),
+			$slugs,
+			'§4.1 wants the data screen first and Settings last'
+		);
 	}
 
-	/**
-	 * The screen is not offered to users without the capability.
-	 */
-	public function test_menu_requires_the_capability() {
-		global $submenu;
+	public function test_the_menu_slug_does_not_embed_the_directory_name() {
+		global $menu;
+
+		wp_set_current_user( $this->editor_id );
+
+		$this->register_admin_menu();
+
+		foreach ( wp_list_pluck( (array) $menu, 2 ) as $slug ) {
+			$this->assertStringNotContainsString( '.php', (string) $slug, 'the menu slug is still a plugin file name' );
+		}
+
+		$this->assertSame( WP_DRAFTSFORFRIENDS_SLUG, WP_DraftsForFriends_Admin::PAGE, 'PAGE must be the plugin slug' );
+	}
+
+	public function test_the_menu_requires_the_capability() {
+		global $menu;
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-		set_current_screen( 'edit' );
 
-		$submenu         = array();
-		$GLOBALS['menu'] = array();
+		$this->register_admin_menu();
 
-		$admin = new WP_DraftsForFriends_Admin();
-		$admin->add_menu();
-
-		$slugs = wp_list_pluck( (array) ( $submenu['edit.php'] ?? array() ), 2 );
-
-		$this->assertNotContains( 'draftsforfriends', $slugs );
+		$this->assertNotContains( WP_DraftsForFriends_Admin::PAGE, wp_list_pluck( (array) $menu, 2 ) );
 	}
 
-	/**
-	 * A single row can be rendered on its own, which is what the endpoint returns
-	 * for the script to inject.
-	 */
-	public function test_render_row_standalone() {
+	public function test_the_settings_submenu_is_hidden_from_an_author() {
+		global $submenu;
+
 		wp_set_current_user( $this->author_id );
 
-		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-		$html  = WP_DraftsForFriends_List_Table::render_row( $share );
+		$this->register_admin_menu();
 
-		$this->assertStringContainsString( 'draftsforfriends-current-' . (int) $share->id, $html );
-		$this->assertStringContainsString( $share->hash, $html );
-		$this->assertStringNotContainsString( 'Draft <b>Title</b>', $html );
+		$entries = (array) ( $submenu[ WP_DraftsForFriends_Admin::PAGE ] ?? array() );
+
+		$this->assertNotEmpty( $entries, 'an author should still get the shared drafts submenu' );
+
+		$this->assertNotContains(
+			WP_DraftsForFriends_Settings::PAGE,
+			wp_list_pluck( $entries, 2 ),
+			'the settings screen takes manage_options, which an author does not have'
+		);
 	}
 
-	/**
-	 * Rendering nothing is not an error.
-	 */
-	public function test_render_row_handles_nothing() {
-		$this->assertSame( '', WP_DraftsForFriends_List_Table::render_row( null ) );
+	public function test_the_capability_filter_gates_every_screen() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$seen = array();
+
+		add_filter(
+			'wp_draftsforfriends_capability',
+			static function ( $capability, $context ) use ( &$seen ) {
+				$seen[] = $context;
+
+				return 'read';
+			},
+			10,
+			2
+		);
+
+		$html = $this->render_admin_page();
+
+		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'the filter did not open the screen' );
+		$this->assertContains( 'shares', $seen, 'the shared drafts screen did not consult the filter' );
+
+		$this->assertSame( 'read', WP_DraftsForFriends_Settings::capability( 'settings' ), 'the settings screen did not consult the filter' );
+		$this->assertContains( 'settings', $seen );
 	}
 
-	/**
-	 * A share that has never been extended reads N/A rather than a bogus date.
-	 */
-	public function test_never_extended_reads_na() {
+	public function test_the_assets_load_only_on_the_plugins_own_screen() {
 		wp_set_current_user( $this->author_id );
 
-		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-		$html  = WP_DraftsForFriends_List_Table::render_row( $share );
+		$this->register_admin_menu();
 
-		$this->assertStringContainsString( 'N/A', $html );
+		WP_DraftsForFriends_Admin::admin_enqueue_scripts( 'edit.php' );
+
+		$this->assertFalse( wp_script_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the script loaded on an unrelated screen' );
+		$this->assertFalse( wp_style_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the stylesheet loaded on an unrelated screen' );
+
+		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
+
+		$this->assertTrue( wp_script_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the script did not load on its own screen' );
+		$this->assertTrue( wp_style_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the stylesheet did not load on its own screen' );
+	}
+
+	public function test_the_asset_urls_are_derived_from_the_main_file() {
+		wp_set_current_user( $this->author_id );
+
+		$this->register_admin_menu();
+
+		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
+
+		$this->assertSame(
+			WP_DRAFTSFORFRIENDS_URL . 'js/wp-draftsforfriends-admin.js',
+			wp_scripts()->registered['wp-draftsforfriends-admin']->src,
+			'the script URL is not built from WP_DRAFTSFORFRIENDS_URL, so it 404s under a renamed directory'
+		);
+
+		$this->assertSame(
+			WP_DRAFTSFORFRIENDS_URL . 'css/wp-draftsforfriends-admin.css',
+			wp_styles()->registered['wp-draftsforfriends-admin']->src,
+			'the stylesheet URL is not built from WP_DRAFTSFORFRIENDS_URL'
+		);
+	}
+
+	public function test_the_localised_object_carries_every_string_the_script_reads() {
+		wp_set_current_user( $this->author_id );
+
+		$this->register_admin_menu();
+
+		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
+
+		$data = (string) wp_scripts()->get_data( 'wp-draftsforfriends-admin', 'data' );
+
+		$this->assertStringContainsString( 'wpDraftsForFriendsL10n', $data, '§6 names the localised object {{CLASS}}L10n in lowerCamel' );
+
+		foreach ( array( 'errorPostId', 'errorExpires', 'errorSelect', 'confirmRevoke', 'copy', 'copied', 'copyFailed' ) as $key ) {
+			$this->assertStringContainsString( '"' . $key . '"', $data, "the '{$key}' string is not localised into the page" );
+		}
 	}
 }

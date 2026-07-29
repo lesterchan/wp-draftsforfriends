@@ -2,67 +2,13 @@
 /**
  * The data layer: expiry arithmetic, the countdown, and capability scoping.
  *
- * @package WP-DraftsForFriends
+ * @package wp-draftsforfriends
  */
 
 /**
  * WP_DraftsForFriends_Shares.
  */
-class WP_DraftsForFriends_Shares_Test extends WP_UnitTestCase {
-
-	/**
-	 * An author, who may only touch their own posts.
-	 *
-	 * @var int
-	 */
-	private $author_id;
-
-	/**
-	 * An editor, who has edit_others_posts.
-	 *
-	 * @var int
-	 */
-	private $editor_id;
-
-	/**
-	 * The author's draft.
-	 *
-	 * @var int
-	 */
-	private $draft_id;
-
-	/**
-	 * The editor's draft.
-	 *
-	 * @var int
-	 */
-	private $editor_draft_id;
-
-	/**
-	 * Set up fixtures.
-	 */
-	public function set_up() {
-		parent::set_up();
-
-		$this->author_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		$this->editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
-
-		$this->draft_id = self::factory()->post->create(
-			array(
-				'post_status' => 'draft',
-				'post_author' => $this->author_id,
-				'post_title'  => 'Author Draft',
-			)
-		);
-
-		$this->editor_draft_id = self::factory()->post->create(
-			array(
-				'post_status' => 'draft',
-				'post_author' => $this->editor_id,
-				'post_title'  => 'Editor Draft',
-			)
-		);
-	}
+class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 	/**
 	 * The table is registered on $wpdb, including in $wpdb->tables so it survives

@@ -2,28 +2,14 @@
 /**
  * The front-end preview: the plugin's entire public contract.
  *
- * @package WP-DraftsForFriends
+ * @package wp-draftsforfriends
  */
 
 /**
  * A logged-out visitor holding a link may read the post it was issued for, and
  * nothing else.
  */
-class WP_DraftsForFriends_Preview_Test extends WP_UnitTestCase {
-
-	/**
-	 * Author of the fixtures.
-	 *
-	 * @var int
-	 */
-	private $author_id;
-
-	/**
-	 * An unpublished post.
-	 *
-	 * @var int
-	 */
-	private $draft_id;
+class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 
 	/**
 	 * A second, separately shared unpublished post.
@@ -45,6 +31,9 @@ class WP_DraftsForFriends_Preview_Test extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		// The inherited author and draft are replaced rather than reused: these
+		// tests assert on post_content, and a preview that served an empty body
+		// would pass every one of them.
 		$this->author_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
 		$this->draft_id = self::factory()->post->create(

@@ -2,13 +2,13 @@
 /**
  * Uninstall and the schema.
  *
- * @package WP-DraftsForFriends
+ * @package wp-draftsforfriends
  */
 
 /**
  * Uninstall.php and the table it drops.
  */
-class WP_DraftsForFriends_Uninstall_Test extends WP_UnitTestCase {
+class WP_DraftsForFriends_Uninstall_Test extends WP_DraftsForFriends_TestCase {
 
 	/**
 	 * The table exists and carries every column the plugin reads.

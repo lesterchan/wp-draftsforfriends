@@ -23,8 +23,9 @@ class WP_DraftsForFriends_Shares {
 	/**
 	 * Columns the list table is allowed to sort on.
 	 *
-	 * Interpolated into ORDER BY, so this allow list is the only thing standing
-	 * between a query argument and the SQL. Identifiers cannot be bound.
+	 * The column is bound with prepare()'s %i placeholder in query(), which quotes
+	 * an identifier but does not check it names a column this table has -- so this
+	 * allow list still stands between a query argument and the SQL.
 	 *
 	 * @var array
 	 */
@@ -303,7 +304,6 @@ class WP_DraftsForFriends_Shares {
 			/* translators: %s: post title. */
 			'success' => sprintf( __( 'Shared draft for \'%s\' created', 'wp-draftsforfriends' ), $post->post_title ),
 			'shared'  => self::get( (int) $wpdb->insert_id ),
-			'count'   => number_format_i18n( self::count() ),
 		);
 	}
 
@@ -410,7 +410,6 @@ class WP_DraftsForFriends_Shares {
 		return array(
 			'success' => __( 'Shared draft deleted', 'wp-draftsforfriends' ),
 			'shared'  => $share,
-			'count'   => number_format_i18n( self::count() ),
 		);
 	}
 

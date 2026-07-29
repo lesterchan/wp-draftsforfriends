@@ -54,3 +54,18 @@ tests_add_filter(
 );
 
 require $_tests_dir . '/includes/bootstrap.php';
+
+/*
+ * The plugin loads its three admin classes behind is_admin(), which is false for
+ * the whole of a PHPUnit run, so the tests that drive the screens would never
+ * see them. Required here rather than in each test file's set_up().
+ */
+require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-list-table.php';
+require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-admin.php';
+require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-settings.php';
+
+/*
+ * Discovery is by the test- prefix, so nothing else in tests/ is loaded for us:
+ * the shared test case has to be required explicitly.
+ */
+require_once __DIR__ . '/helper-testcase.php';
