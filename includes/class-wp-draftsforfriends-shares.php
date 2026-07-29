@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-DraftsForFriends class-draftsforfriends-shares.php
+ * Every read and write of the shared drafts table.
  *
  * @package WP-DraftsForFriends
  */
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 2.0.0
  */
-class DraftsForFriends_Shares {
+class WP_DraftsForFriends_Shares {
 
 	/**
 	 * Columns the list table is allowed to sort on.

@@ -8,7 +8,7 @@
 /**
  * The wp_ajax_draftsforfriends_admin endpoint.
  */
-class Test_DraftsForFriends_Ajax extends WP_Ajax_UnitTestCase {
+class WP_DraftsForFriends_Writes_Test extends WP_Ajax_UnitTestCase {
 
 	/**
 	 * An author, who may only touch their own posts.
@@ -273,7 +273,7 @@ class Test_DraftsForFriends_Ajax extends WP_Ajax_UnitTestCase {
 	public function test_extend() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 		$was   = strtotime( $share->date_expired . ' UTC' );
 
 		$response = $this->dispatch(
@@ -301,7 +301,7 @@ class Test_DraftsForFriends_Ajax extends WP_Ajax_UnitTestCase {
 	public function test_extend_nonce_is_per_share() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 
 		$response = $this->dispatch(
 			array(
@@ -324,7 +324,7 @@ class Test_DraftsForFriends_Ajax extends WP_Ajax_UnitTestCase {
 	public function test_delete() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 
 		$before = $this->total();
 
@@ -348,7 +348,7 @@ class Test_DraftsForFriends_Ajax extends WP_Ajax_UnitTestCase {
 	public function test_delete_refuses_another_users_share() {
 		wp_set_current_user( $this->editor_id );
 
-		$share = DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' )['shared'];
 
 		wp_set_current_user( $this->author_id );
 

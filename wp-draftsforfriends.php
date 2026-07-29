@@ -38,32 +38,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * WP-DraftsForFriends version.
+/*
+ * WP_DRAFTSFORFRIENDS_DIR and WP_DRAFTSFORFRIENDS_URL are derived from __FILE__
+ * so the plugin keeps working when it is installed under a directory name other
+ * than wp-draftsforfriends. WP_DRAFTSFORFRIENDS_SLUG is the literal slug: it is
+ * the text domain and the page slug, neither of which may change because
+ * somebody unzipped the plugin into a differently named directory.
  */
 define( 'WP_DRAFTSFORFRIENDS_VERSION', '2.0.0' );
-
-/**
- * Database schema version. Bump when the table definition changes.
- */
 define( 'WP_DRAFTSFORFRIENDS_DB_VERSION', '1' );
-
-/**
- * WP-DraftsForFriends main file.
- */
+define( 'WP_DRAFTSFORFRIENDS_SLUG', 'wp-draftsforfriends' );
 define( 'WP_DRAFTSFORFRIENDS_MAIN_FILE', __FILE__ );
-
-/**
- * WP-DraftsForFriends directory and URL.
- *
- * Derived from this file so the plugin keeps working when it is installed under
- * a directory name other than wp-draftsforfriends.
- */
 define( 'WP_DRAFTSFORFRIENDS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_DRAFTSFORFRIENDS_URL', plugin_dir_url( __FILE__ ) );
 
-require_once __DIR__ . '/includes/class-draftsforfriends-shares.php';
-require_once __DIR__ . '/includes/class-draftsforfriends-preview.php';
-require_once __DIR__ . '/includes/class-draftsforfriends.php';
+require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-shares.php';
+require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-preview.php';
+require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends.php';
 
-DraftsForFriends::get_instance();
+WP_DraftsForFriends::get_instance();

@@ -8,7 +8,7 @@
 /**
  * Uninstall.php and the table it drops.
  */
-class Test_DraftsForFriends_Uninstall extends WP_UnitTestCase {
+class WP_DraftsForFriends_Uninstall_Test extends WP_UnitTestCase {
 
 	/**
 	 * The table exists and carries every column the plugin reads.
@@ -33,9 +33,9 @@ class Test_DraftsForFriends_Uninstall extends WP_UnitTestCase {
 	public function test_schema_version_is_recorded() {
 		// Activation does not fire on plugin update, so the check also runs on
 		// admin_init. Either way the option must end up set.
-		DraftsForFriends::get_instance()->maybe_upgrade_table();
+		WP_DraftsForFriends::get_instance()->maybe_upgrade_table();
 
-		$this->assertSame( WP_DRAFTSFORFRIENDS_DB_VERSION, get_option( DraftsForFriends::DB_VERSION_OPTION ) );
+		$this->assertSame( WP_DRAFTSFORFRIENDS_DB_VERSION, get_option( WP_DraftsForFriends::DB_VERSION_OPTION ) );
 	}
 
 	/**
@@ -44,7 +44,7 @@ class Test_DraftsForFriends_Uninstall extends WP_UnitTestCase {
 	public function test_schema_check_is_idempotent() {
 		global $wpdb;
 
-		$plugin = DraftsForFriends::get_instance();
+		$plugin = WP_DraftsForFriends::get_instance();
 
 		$plugin->maybe_upgrade_table();
 		$before = $wpdb->get_var( $wpdb->prepare( 'SHOW CREATE TABLE %i', $wpdb->prefix . 'draftsforfriends' ), 1 );
@@ -117,7 +117,7 @@ class Test_DraftsForFriends_Uninstall extends WP_UnitTestCase {
 	 * The same three guards apply to activation, which carries its own site loop.
 	 */
 	public function test_activation_site_loop_is_correct() {
-		$source = $this->code( 'includes/class-draftsforfriends.php' );
+		$source = $this->code( 'includes/class-wp-draftsforfriends.php' );
 
 		$this->assertStringNotContainsString( 'wp_get_sites', $source );
 		$this->assertMatchesRegularExpression( "/'number'\s*=>\s*0/", $source );
@@ -136,6 +136,6 @@ class Test_DraftsForFriends_Uninstall extends WP_UnitTestCase {
 	public function test_uninstall_deletes_the_schema_version_option() {
 		$source = $this->code( 'uninstall.php' );
 
-		$this->assertStringContainsString( DraftsForFriends::DB_VERSION_OPTION, $source, 'uninstall must delete the option the plugin creates' );
+		$this->assertStringContainsString( WP_DraftsForFriends::DB_VERSION_OPTION, $source, 'uninstall must delete the option the plugin creates' );
 	}
 }

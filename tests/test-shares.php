@@ -6,9 +6,9 @@
  */
 
 /**
- * DraftsForFriends_Shares.
+ * WP_DraftsForFriends_Shares.
  */
-class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
+class WP_DraftsForFriends_Shares_Test extends WP_UnitTestCase {
 
 	/**
 	 * An author, who may only touch their own posts.
@@ -84,7 +84,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	 * @param int    $expected Seconds for a duration of 2.
 	 */
 	public function test_calculate_expiry_units( $unit, $expected ) {
-		$this->assertSame( $expected, DraftsForFriends_Shares::calculate_expiry( 2, $unit ) );
+		$this->assertSame( $expected, WP_DraftsForFriends_Shares::calculate_expiry( 2, $unit ) );
 	}
 
 	/**
@@ -105,16 +105,16 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	 * An unrecognised unit falls back to minutes rather than warning.
 	 */
 	public function test_calculate_expiry_rejects_unknown_unit() {
-		$this->assertSame( 120, DraftsForFriends_Shares::calculate_expiry( 2, 'zzz' ) );
-		$this->assertSame( 120, DraftsForFriends_Shares::calculate_expiry( 2, '' ) );
+		$this->assertSame( 120, WP_DraftsForFriends_Shares::calculate_expiry( 2, 'zzz' ) );
+		$this->assertSame( 120, WP_DraftsForFriends_Shares::calculate_expiry( 2, '' ) );
 	}
 
 	/**
 	 * A non-positive duration falls back to sixty of whatever unit was given.
 	 */
 	public function test_calculate_expiry_rejects_non_positive_duration() {
-		$this->assertSame( 60 * HOUR_IN_SECONDS, DraftsForFriends_Shares::calculate_expiry( 0, 'h' ) );
-		$this->assertSame( 60 * HOUR_IN_SECONDS, DraftsForFriends_Shares::calculate_expiry( -5, 'h' ) );
+		$this->assertSame( 60 * HOUR_IN_SECONDS, WP_DraftsForFriends_Shares::calculate_expiry( 0, 'h' ) );
+		$this->assertSame( 60 * HOUR_IN_SECONDS, WP_DraftsForFriends_Shares::calculate_expiry( -5, 'h' ) );
 	}
 
 	/**
@@ -125,19 +125,19 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 			return gmdate( 'Y-m-d H:i:s', time() + $seconds );
 		};
 
-		$this->assertSame( 'Expired', DraftsForFriends_Shares::countdown( $in( -1 ) ) );
-		$this->assertSame( 'Expired', DraftsForFriends_Shares::countdown( $in( -DAY_IN_SECONDS ) ) );
+		$this->assertSame( 'Expired', WP_DraftsForFriends_Shares::countdown( $in( -1 ) ) );
+		$this->assertSame( 'Expired', WP_DraftsForFriends_Shares::countdown( $in( -DAY_IN_SECONDS ) ) );
 
-		$this->assertStringContainsString( 'second', DraftsForFriends_Shares::countdown( $in( 30 ) ) );
-		$this->assertStringContainsString( '2 hours', DraftsForFriends_Shares::countdown( $in( 2 * HOUR_IN_SECONDS + 30 ) ) );
-		$this->assertStringContainsString( '3 days', DraftsForFriends_Shares::countdown( $in( 3 * DAY_IN_SECONDS + 30 ) ) );
+		$this->assertStringContainsString( 'second', WP_DraftsForFriends_Shares::countdown( $in( 30 ) ) );
+		$this->assertStringContainsString( '2 hours', WP_DraftsForFriends_Shares::countdown( $in( 2 * HOUR_IN_SECONDS + 30 ) ) );
+		$this->assertStringContainsString( '3 days', WP_DraftsForFriends_Shares::countdown( $in( 3 * DAY_IN_SECONDS + 30 ) ) );
 	}
 
 	/**
 	 * The singular form is used for one of each unit.
 	 */
 	public function test_countdown_is_singular_for_one() {
-		$countdown = DraftsForFriends_Shares::countdown( gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS + HOUR_IN_SECONDS + MINUTE_IN_SECONDS + 5 ) );
+		$countdown = WP_DraftsForFriends_Shares::countdown( gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS + HOUR_IN_SECONDS + MINUTE_IN_SECONDS + 5 ) );
 
 		$this->assertStringContainsString( '1 day', $countdown );
 		$this->assertStringContainsString( '1 hour', $countdown );
@@ -150,7 +150,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	public function test_create() {
 		wp_set_current_user( $this->author_id );
 
-		$result = DraftsForFriends_Shares::create( $this->draft_id, 3, 'h' );
+		$result = WP_DraftsForFriends_Shares::create( $this->draft_id, 3, 'h' );
 
 		$this->assertArrayHasKey( 'success', $result );
 		$this->assertNotEmpty( $result['shared'] );
@@ -173,8 +173,8 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	public function test_create_issues_unique_hashes() {
 		wp_set_current_user( $this->author_id );
 
-		$first  = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
-		$second = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		$first  = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		$second = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
 
 		$this->assertNotSame( $first['shared']->hash, $second['shared']->hash );
 	}
@@ -185,8 +185,8 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	public function test_create_refusals() {
 		wp_set_current_user( $this->author_id );
 
-		$this->assertArrayHasKey( 'error', DraftsForFriends_Shares::create( 0, 1, 'h' ), 'no post chosen' );
-		$this->assertArrayHasKey( 'error', DraftsForFriends_Shares::create( 99999999, 1, 'h' ), 'no such post' );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::create( 0, 1, 'h' ), 'no post chosen' );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::create( 99999999, 1, 'h' ), 'no such post' );
 
 		$published = self::factory()->post->create(
 			array(
@@ -195,8 +195,8 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertArrayHasKey( 'error', DraftsForFriends_Shares::create( $published, 1, 'h' ), 'already published' );
-		$this->assertArrayHasKey( 'error', DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' ), "someone else's draft" );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::create( $published, 1, 'h' ), 'already published' );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' ), "someone else's draft" );
 	}
 
 	/**
@@ -205,10 +205,10 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	public function test_extend_adds_to_an_unexpired_share() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 		$was   = strtotime( $share->date_expired . ' UTC' );
 
-		$result = DraftsForFriends_Shares::extend( $share->id, 1, 'h' );
+		$result = WP_DraftsForFriends_Shares::extend( $share->id, 1, 'h' );
 
 		$this->assertArrayHasKey( 'success', $result );
 
@@ -226,7 +226,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 
 		// Push it an hour into the past.
 		$wpdb->update(
@@ -237,7 +237,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 			array( '%d' )
 		);
 
-		$result = DraftsForFriends_Shares::extend( $share->id, 1, 'h' );
+		$result = WP_DraftsForFriends_Shares::extend( $share->id, 1, 'h' );
 
 		$this->assertArrayHasKey( 'success', $result );
 
@@ -253,15 +253,15 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	public function test_delete() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 
-		$this->assertTrue( DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
+		$this->assertTrue( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
 
-		$result = DraftsForFriends_Shares::delete( $share->id );
+		$result = WP_DraftsForFriends_Shares::delete( $share->id );
 
 		$this->assertArrayHasKey( 'success', $result );
-		$this->assertNull( DraftsForFriends_Shares::get( $share->id ) );
-		$this->assertFalse( DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
+		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ) );
+		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
 	}
 
 	/**
@@ -273,18 +273,18 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	public function test_author_cannot_touch_another_users_share() {
 		wp_set_current_user( $this->editor_id );
 
-		$share = DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' )['shared'];
 
 		wp_set_current_user( $this->author_id );
 
-		$this->assertNull( DraftsForFriends_Shares::get( $share->id ) );
-		$this->assertArrayHasKey( 'error', DraftsForFriends_Shares::extend( $share->id, 5, 'd' ) );
-		$this->assertArrayHasKey( 'error', DraftsForFriends_Shares::delete( $share->id ) );
+		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ) );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::extend( $share->id, 5, 'd' ) );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::delete( $share->id ) );
 
 		// And the share is still intact.
 		wp_set_current_user( $this->editor_id );
 
-		$this->assertNotNull( DraftsForFriends_Shares::get( $share->id ) );
+		$this->assertNotNull( WP_DraftsForFriends_Shares::get( $share->id ) );
 	}
 
 	/**
@@ -292,18 +292,18 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	 */
 	public function test_count_and_query_are_scoped_by_capability() {
 		wp_set_current_user( $this->author_id );
-		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
 
 		wp_set_current_user( $this->editor_id );
-		DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' );
 
-		$this->assertSame( 2, DraftsForFriends_Shares::count(), 'an editor sees every share' );
-		$this->assertCount( 2, DraftsForFriends_Shares::query() );
+		$this->assertSame( 2, WP_DraftsForFriends_Shares::count(), 'an editor sees every share' );
+		$this->assertCount( 2, WP_DraftsForFriends_Shares::query() );
 
 		wp_set_current_user( $this->author_id );
 
-		$this->assertSame( 1, DraftsForFriends_Shares::count(), 'an author sees only their own' );
-		$this->assertCount( 1, DraftsForFriends_Shares::query() );
+		$this->assertSame( 1, WP_DraftsForFriends_Shares::count(), 'an author sees only their own' );
+		$this->assertCount( 1, WP_DraftsForFriends_Shares::query() );
 	}
 
 	/**
@@ -314,7 +314,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 
 		$wpdb->update(
 			$wpdb->draftsforfriends,
@@ -324,14 +324,14 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 			array( '%d' )
 		);
 
-		$this->assertFalse( DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
+		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
 	}
 
 	/**
 	 * An empty hash never unlocks anything.
 	 */
 	public function test_hash_unlocks_rejects_empty() {
-		$this->assertFalse( DraftsForFriends_Shares::hash_unlocks( $this->draft_id, '' ) );
+		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, '' ) );
 	}
 
 	/**
@@ -339,12 +339,12 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	 */
 	public function test_query_rejects_arbitrary_orderby() {
 		wp_set_current_user( $this->author_id );
-		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
 
 		// If either of these reached the SQL the query would error and return no
 		// rows, so getting the row back is the assertion.
-		$this->assertCount( 1, DraftsForFriends_Shares::query( 'id; DROP TABLE wp_posts', 'asc' ) );
-		$this->assertCount( 1, DraftsForFriends_Shares::query( 'date_created', "asc'--" ) );
+		$this->assertCount( 1, WP_DraftsForFriends_Shares::query( 'id; DROP TABLE wp_posts', 'asc' ) );
+		$this->assertCount( 1, WP_DraftsForFriends_Shares::query( 'date_created', "asc'--" ) );
 
 		$this->assertNotEmpty( get_post( $this->draft_id ), 'wp_posts survived' );
 	}
@@ -355,8 +355,8 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 	public function test_url() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
-		$url   = DraftsForFriends_Shares::url( $share );
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$url   = WP_DraftsForFriends_Shares::url( $share );
 
 		$this->assertStringContainsString( 'p=' . $this->draft_id, $url );
 		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $url );
@@ -371,7 +371,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		$ids = array();
 
-		foreach ( DraftsForFriends_Shares::shareable_posts() as $group ) {
+		foreach ( WP_DraftsForFriends_Shares::shareable_posts() as $group ) {
 			foreach ( $group['posts'] as $post ) {
 				$ids[] = $post->ID;
 			}
@@ -384,7 +384,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		$ids = array();
 
-		foreach ( DraftsForFriends_Shares::shareable_posts() as $group ) {
+		foreach ( WP_DraftsForFriends_Shares::shareable_posts() as $group ) {
 			foreach ( $group['posts'] as $post ) {
 				$ids[] = $post->ID;
 			}
@@ -407,7 +407,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		foreach ( DraftsForFriends_Shares::shareable_posts() as $group ) {
+		foreach ( WP_DraftsForFriends_Shares::shareable_posts() as $group ) {
 			foreach ( $group['posts'] as $post ) {
 				$this->assertNotSame( $published, $post->ID );
 			}
@@ -427,7 +427,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
 
 		$orphan_post = self::factory()->post->create(
 			array(
@@ -436,7 +436,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 			)
 		);
 
-		$orphan = DraftsForFriends_Shares::create( $orphan_post, 1, 'h' )['shared'];
+		$orphan = WP_DraftsForFriends_Shares::create( $orphan_post, 1, 'h' )['shared'];
 
 		// Strand the row the way a pre-2.0.0 install would have: delete the post
 		// straight from the table, behind the deleted_post hook.
@@ -446,8 +446,8 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->draftsforfriends} WHERE id = %d", $orphan->id ) ), 'the orphan row is still there' );
 
 		$this->assertSame(
-			count( DraftsForFriends_Shares::query( 'date_created', 'desc', 0, 100 ) ),
-			DraftsForFriends_Shares::count(),
+			count( WP_DraftsForFriends_Shares::query( 'date_created', 'desc', 0, 100 ) ),
+			WP_DraftsForFriends_Shares::count(),
 			'the count must match the number of rows the list can actually show'
 		);
 	}
@@ -460,8 +460,8 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
-		DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
 
 		wp_delete_post( $this->draft_id, true );
 
@@ -479,7 +479,7 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
 
 		wp_trash_post( $this->draft_id );
 
@@ -511,17 +511,17 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 			)
 		);
 
-		DraftsForFriends_Shares::create( $first, 1, 'h' );
-		DraftsForFriends_Shares::create( $last, 5, 'h' );
+		WP_DraftsForFriends_Shares::create( $first, 1, 'h' );
+		WP_DraftsForFriends_Shares::create( $last, 5, 'h' );
 
-		$asc = DraftsForFriends_Shares::query( 'post_title', 'asc', 0, 50 );
+		$asc = WP_DraftsForFriends_Shares::query( 'post_title', 'asc', 0, 50 );
 		$this->assertSame( 'AAA First', $asc[0]->post_title );
 
-		$desc = DraftsForFriends_Shares::query( 'post_title', 'desc', 0, 50 );
+		$desc = WP_DraftsForFriends_Shares::query( 'post_title', 'desc', 0, 50 );
 		$this->assertSame( 'ZZZ Last', $desc[0]->post_title );
 
 		// A longer share sorts last by expiry ascending.
-		$by_expiry = DraftsForFriends_Shares::query( 'date_expired', 'asc', 0, 50 );
+		$by_expiry = WP_DraftsForFriends_Shares::query( 'date_expired', 'asc', 0, 50 );
 		$this->assertSame( 'ZZZ Last', end( $by_expiry )->post_title );
 	}
 
@@ -532,11 +532,11 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 		wp_set_current_user( $this->author_id );
 
 		for ( $i = 0; $i < 5; $i++ ) {
-			DraftsForFriends_Shares::create( $this->draft_id, $i + 1, 'h' );
+			WP_DraftsForFriends_Shares::create( $this->draft_id, $i + 1, 'h' );
 		}
 
-		$page_one = wp_list_pluck( DraftsForFriends_Shares::query( 'id', 'asc', 0, 2 ), 'id' );
-		$page_two = wp_list_pluck( DraftsForFriends_Shares::query( 'id', 'asc', 2, 2 ), 'id' );
+		$page_one = wp_list_pluck( WP_DraftsForFriends_Shares::query( 'id', 'asc', 0, 2 ), 'id' );
+		$page_two = wp_list_pluck( WP_DraftsForFriends_Shares::query( 'id', 'asc', 2, 2 ), 'id' );
 
 		$this->assertCount( 2, $page_one );
 		$this->assertCount( 2, $page_two );
@@ -551,11 +551,11 @@ class Test_DraftsForFriends_Shares extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 
 		$wpdb->delete( $wpdb->posts, array( 'ID' => $this->draft_id ), array( '%d' ) );
 		clean_post_cache( $this->draft_id );
 
-		$this->assertNull( DraftsForFriends_Shares::get( $share->id ) );
+		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ) );
 	}
 }

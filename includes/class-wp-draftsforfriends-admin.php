@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-DraftsForFriends class-draftsforfriends-admin.php
+ * The Drafts for Friends screen.
  *
  * @package WP-DraftsForFriends
  */
@@ -14,21 +14,30 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 2.0.0
  */
-class DraftsForFriends_Admin {
+class WP_DraftsForFriends_Admin {
 
 	/**
-	 * The menu slug.
+	 * The menu and page slug.
 	 *
 	 * Before 2.0.0 this was the plugin file itself, which baked the plugin's
 	 * directory name into the page URL and into the hook suffix WordPress hands
-	 * back to admin_enqueue_scripts.
+	 * back to admin_enqueue_scripts, so installing the plugin under any other
+	 * folder name broke both.
 	 *
 	 * @var string
 	 */
-	const SLUG = 'draftsforfriends';
+	const PAGE = 'wp-draftsforfriends';
 
 	/**
-	 * Capability required to reach the screen and the endpoint.
+	 * Capability required to reach the shared drafts screen.
+	 *
+	 * Deliberately publish_posts rather than the manage_options a settings-only
+	 * plugin would take: everything this screen does is scoped to drafts the
+	 * user may already edit, and a plugin for sharing your own drafts has no
+	 * business demanding the capability that lets somebody reconfigure the site.
+	 * Section 2.7 keeps a plugin's existing custom capability for its data
+	 * screens, and settings stay on manage_options -- see
+	 * WP_DraftsForFriends_Settings.
 	 *
 	 * @var string
 	 */
@@ -39,7 +48,7 @@ class DraftsForFriends_Admin {
 	 *
 	 * @var string
 	 */
-	const SECTION = 'draftsforfriends_share';
+	const SECTION_SHARE = 'wp_draftsforfriends_share';
 
 	/**
 	 * The hook suffix add_submenu_page() returned.
@@ -88,7 +97,7 @@ class DraftsForFriends_Admin {
 			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
 			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
 			self::CAPABILITY,
-			self::SLUG,
+			self::PAGE,
 			array( $this, 'render_page' )
 		);
 
@@ -111,8 +120,8 @@ class DraftsForFriends_Admin {
 			'per_page',
 			array(
 				'label'   => __( 'Shared drafts per page', 'wp-draftsforfriends' ),
-				'default' => DraftsForFriends_Table::PER_PAGE,
-				'option'  => 'draftsforfriends_per_page',
+				'default' => WP_DraftsForFriends_List_Table::PER_PAGE,
+				'option'  => 'wp_draftsforfriends_per_page',
 			)
 		);
 	}
@@ -143,18 +152,18 @@ class DraftsForFriends_Admin {
 		}
 
 		add_settings_section(
-			self::SECTION,
+			self::SECTION_SHARE,
 			__( 'Share Draft with Friends', 'wp-draftsforfriends' ),
 			'__return_false',
-			self::SLUG
+			self::PAGE
 		);
 
 		add_settings_field(
 			'draftsforfriends-post-id',
 			__( 'Choose a draft:', 'wp-draftsforfriends' ),
 			array( $this, 'render_post_field' ),
-			self::SLUG,
-			self::SECTION,
+			self::PAGE,
+			self::SECTION_SHARE,
 			array( 'label_for' => 'draftsforfriends-post-id' )
 		);
 
@@ -162,8 +171,8 @@ class DraftsForFriends_Admin {
 			'draftsforfriends-expires',
 			__( 'Share it for:', 'wp-draftsforfriends' ),
 			array( $this, 'render_duration_field' ),
-			self::SLUG,
-			self::SECTION,
+			self::PAGE,
+			self::SECTION_SHARE,
 			array( 'label_for' => 'draftsforfriends-expires' )
 		);
 	}
@@ -181,7 +190,7 @@ class DraftsForFriends_Admin {
 	 */
 	private function shareable_groups() {
 		if ( null === $this->groups ) {
-			$this->groups = DraftsForFriends_Shares::shareable_posts();
+			$this->groups = WP_DraftsForFriends_Shares::shareable_posts();
 		}
 
 		return $this->groups;
@@ -276,7 +285,7 @@ class DraftsForFriends_Admin {
 				'errorExpires'   => __( 'Please choose a valid duration', 'wp-draftsforfriends' ),
 				'errorRequest'   => __( 'The request failed. Please try again.', 'wp-draftsforfriends' ),
 				'noSharedDrafts' => __( 'No shared drafts!', 'wp-draftsforfriends' ),
-				'columnCount'    => count( ( new DraftsForFriends_Table() )->get_columns() ),
+				'columnCount'    => count( ( new WP_DraftsForFriends_List_Table() )->get_columns() ),
 			)
 		);
 	}
@@ -291,7 +300,7 @@ class DraftsForFriends_Admin {
 			wp_die( esc_html__( 'You do not have permission to manage shared drafts.', 'wp-draftsforfriends' ) );
 		}
 
-		$table = new DraftsForFriends_Table();
+		$table = new WP_DraftsForFriends_List_Table();
 		$table->prepare_items();
 
 		// Rendered up front so the form element is only emitted when the
@@ -301,7 +310,7 @@ class DraftsForFriends_Admin {
 		// $wp_settings_sections global also means a third party that adds a
 		// field to this page gets a form to put it in.
 		ob_start();
-		do_settings_sections( self::SLUG );
+		do_settings_sections( self::PAGE );
 		$fields = (string) ob_get_clean();
 		?>
 		<div class="wrap">
@@ -332,7 +341,7 @@ class DraftsForFriends_Admin {
 	 */
 	public static function ajax() {
 		// Gate the endpoint before any request data is read. The per-post checks
-		// in DraftsForFriends_Shares stay: this is the coarse "may you use this
+		// in WP_DraftsForFriends_Shares stay: this is the coarse "may you use this
 		// screen at all" test.
 		if ( ! current_user_can( self::CAPABILITY ) ) {
 			wp_send_json( array( 'error' => __( 'You do not have permission to manage shared drafts.', 'wp-draftsforfriends' ) ) );
@@ -353,7 +362,7 @@ class DraftsForFriends_Admin {
 					wp_send_json( $nonce_error );
 				}
 
-				wp_send_json( self::with_row( DraftsForFriends_Shares::create( $post_id, $expires, $measure ) ) );
+				wp_send_json( self::with_row( WP_DraftsForFriends_Shares::create( $post_id, $expires, $measure ) ) );
 				break;
 
 			case 'extend':
@@ -361,7 +370,7 @@ class DraftsForFriends_Admin {
 					wp_send_json( $nonce_error );
 				}
 
-				wp_send_json( self::with_row( DraftsForFriends_Shares::extend( $id, $expires, $measure ) ) );
+				wp_send_json( self::with_row( WP_DraftsForFriends_Shares::extend( $id, $expires, $measure ) ) );
 				break;
 
 			case 'delete':
@@ -369,7 +378,7 @@ class DraftsForFriends_Admin {
 					wp_send_json( $nonce_error );
 				}
 
-				wp_send_json( self::with_count( DraftsForFriends_Shares::delete( $id ) ) );
+				wp_send_json( self::with_count( WP_DraftsForFriends_Shares::delete( $id ) ) );
 				break;
 		}
 
@@ -379,7 +388,7 @@ class DraftsForFriends_Admin {
 	/**
 	 * Attach the rendered row and the refreshed count to a successful response.
 	 *
-	 * @param array $result Result from DraftsForFriends_Shares.
+	 * @param array $result Result from WP_DraftsForFriends_Shares.
 	 * @return array
 	 */
 	private static function with_row( array $result ) {
@@ -387,7 +396,7 @@ class DraftsForFriends_Admin {
 			return $result;
 		}
 
-		$result['html'] = DraftsForFriends_Table::render_row( isset( $result['shared'] ) ? $result['shared'] : null );
+		$result['html'] = WP_DraftsForFriends_List_Table::render_row( isset( $result['shared'] ) ? $result['shared'] : null );
 
 		return self::with_count( $result );
 	}
@@ -397,7 +406,7 @@ class DraftsForFriends_Admin {
 	 *
 	 * Done server side so the script does not have to carry both plural forms.
 	 *
-	 * @param array $result Result from DraftsForFriends_Shares.
+	 * @param array $result Result from WP_DraftsForFriends_Shares.
 	 * @return array
 	 */
 	private static function with_count( array $result ) {
@@ -405,7 +414,7 @@ class DraftsForFriends_Admin {
 			return $result;
 		}
 
-		$total = DraftsForFriends_Shares::count();
+		$total = WP_DraftsForFriends_Shares::count();
 
 		/* translators: %s: number of shared drafts. */
 		$result['countText'] = sprintf( _n( '%s item', '%s items', $total, 'wp-draftsforfriends' ), number_format_i18n( $total ) );

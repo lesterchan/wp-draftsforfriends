@@ -12,7 +12,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit();
 }
 
-require_once __DIR__ . '/includes/class-draftsforfriends.php';
+require_once __DIR__ . '/includes/class-wp-draftsforfriends.php';
 
 /**
  * Delete the plugin's options for the current site.
@@ -29,7 +29,7 @@ function draftsforfriends_delete_options() {
  * @return void
  */
 function draftsforfriends_drop_table() {
-	DraftsForFriends::drop_table();
+	WP_DraftsForFriends::drop_table();
 }
 
 if ( is_multisite() ) {

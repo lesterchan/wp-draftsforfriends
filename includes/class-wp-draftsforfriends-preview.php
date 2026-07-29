@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-DraftsForFriends class-draftsforfriends-preview.php
+ * Serving a shared draft to a friend.
  *
  * @package WP-DraftsForFriends
  */
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 2.0.0
  */
-class DraftsForFriends_Preview {
+class WP_DraftsForFriends_Preview {
 
 	/**
 	 * The post captured by the query currently running, if any.
@@ -96,7 +96,7 @@ class DraftsForFriends_Preview {
 
 		$hash = $this->requested_hash();
 
-		if ( '' === $hash || ! DraftsForFriends_Shares::hash_unlocks( $post->ID, $hash ) ) {
+		if ( '' === $hash || ! WP_DraftsForFriends_Shares::hash_unlocks( $post->ID, $hash ) ) {
 			return $posts;
 		}
 

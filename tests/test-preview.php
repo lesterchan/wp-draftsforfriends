@@ -9,7 +9,7 @@
  * A logged-out visitor holding a link may read the post it was issued for, and
  * nothing else.
  */
-class Test_DraftsForFriends_Preview extends WP_UnitTestCase {
+class WP_DraftsForFriends_Preview_Test extends WP_UnitTestCase {
 
 	/**
 	 * Author of the fixtures.

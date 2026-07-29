@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-DraftsForFriends class-draftsforfriends-table.php
+ * The shared drafts list table.
  *
  * @package WP-DraftsForFriends
  */
@@ -24,7 +24,7 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  *
  * @since 2.0.0
  */
-class DraftsForFriends_Table extends WP_List_Table {
+class WP_DraftsForFriends_List_Table extends WP_List_Table {
 
 	/**
 	 * Default rows per page.
@@ -110,7 +110,7 @@ class DraftsForFriends_Table extends WP_List_Table {
 	public function prepare_items() {
 		$this->_column_headers = $this->column_headers();
 
-		$per_page = $this->get_items_per_page( 'draftsforfriends_per_page', self::PER_PAGE );
+		$per_page = $this->get_items_per_page( 'wp_draftsforfriends_per_page', self::PER_PAGE );
 		$paged    = max( 1, (int) $this->get_pagenum() );
 
 		// Sorting and paging arguments on a read-only list screen. A sortable
@@ -121,9 +121,9 @@ class DraftsForFriends_Table extends WP_List_Table {
 		$orderby = isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'date_created';
 		$order   = isset( $_GET['order'] ) ? sanitize_key( wp_unslash( $_GET['order'] ) ) : 'desc';
 
-		$total = DraftsForFriends_Shares::count();
+		$total = WP_DraftsForFriends_Shares::count();
 
-		$this->items = DraftsForFriends_Shares::query( $orderby, $order, ( $paged - 1 ) * $per_page, $per_page );
+		$this->items = WP_DraftsForFriends_Shares::query( $orderby, $order, ( $paged - 1 ) * $per_page, $per_page );
 
 		$this->set_pagination_args(
 			array(
@@ -232,7 +232,7 @@ class DraftsForFriends_Table extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_date_expired( $item ) {
-		return esc_html( DraftsForFriends_Shares::countdown( $item->date_expired ) );
+		return esc_html( WP_DraftsForFriends_Shares::countdown( $item->date_expired ) );
 	}
 
 	/**
@@ -256,7 +256,7 @@ class DraftsForFriends_Table extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_link( $item ) {
-		$url = DraftsForFriends_Shares::url( $item );
+		$url = WP_DraftsForFriends_Shares::url( $item );
 		$id  = (int) $item->id;
 
 		ob_start();
@@ -294,7 +294,7 @@ class DraftsForFriends_Table extends WP_List_Table {
 			?>
 			<label class="screen-reader-text" for="draftsforfriends-measure-<?php echo esc_attr( $id ); ?>"><?php esc_html_e( 'Duration unit', 'wp-draftsforfriends' ); ?></label>
 			<select id="draftsforfriends-measure-<?php echo esc_attr( $id ); ?>" class="draftsforfriends-measure">
-				<?php foreach ( DraftsForFriends_Admin::measures() as $value => $label ) : ?>
+				<?php foreach ( WP_DraftsForFriends_Admin::measures() as $value => $label ) : ?>
 					<option value="<?php echo esc_attr( $value ); ?>" <?php selected( 'h', $value ); ?>><?php echo esc_html( $label ); ?></option>
 				<?php endforeach; ?>
 			</select>

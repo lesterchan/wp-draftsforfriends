@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 /**
  * The l10n object wp_localize_script() puts on the page.
  *
- * Keys must match includes/class-draftsforfriends-admin.php exactly.
+ * Keys must match includes/class-wp-draftsforfriends-admin.php exactly.
  *
  * @return {Object} The l10n object.
  */
@@ -44,7 +44,7 @@ export function loadScript() {
 }
 
 /**
- * Markup matching what DraftsForFriends_Admin::render_page() emits.
+ * Markup matching what WP_DraftsForFriends_Admin::render_page() emits.
  *
  * @param {Array} rows Share rows to render.
  * @return {string} The markup.
@@ -70,7 +70,7 @@ export function screenMarkup( rows = [] ) {
 }
 
 /**
- * Markup matching what DraftsForFriends_Table::single_row() emits.
+ * Markup matching what WP_DraftsForFriends_List_Table::single_row() emits.
  *
  * @param {Object} row Share row.
  * @return {string} The markup.

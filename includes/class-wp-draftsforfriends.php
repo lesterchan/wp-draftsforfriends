@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-DraftsForFriends class-draftsforfriends.php
+ * The plugin bootstrap.
  *
  * @package WP-DraftsForFriends
  */
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 2.0.0
  */
-class DraftsForFriends {
+class WP_DraftsForFriends {
 
 	/**
 	 * The option holding the schema version.
@@ -29,7 +29,7 @@ class DraftsForFriends {
 	/**
 	 * Static instance.
 	 *
-	 * @var DraftsForFriends|null
+	 * @var WP_DraftsForFriends|null
 	 */
 	private static $instance;
 
@@ -51,7 +51,7 @@ class DraftsForFriends {
 	/**
 	 * Initializes the plugin object and returns its instance.
 	 *
-	 * @return DraftsForFriends
+	 * @return WP_DraftsForFriends
 	 */
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
@@ -89,9 +89,9 @@ class DraftsForFriends {
 
 		// A share whose post is gone can never be shown or managed, and it used to
 		// keep inflating the admin item count from a table nothing joined it out of.
-		add_action( 'deleted_post', array( 'DraftsForFriends_Shares', 'delete_for_post' ) );
+		add_action( 'deleted_post', array( 'WP_DraftsForFriends_Shares', 'delete_for_post' ) );
 
-		new DraftsForFriends_Preview();
+		new WP_DraftsForFriends_Preview();
 
 		// Registered unconditionally, and pointed at a loader rather than at the
 		// admin class: wp_ajax_* only ever fires from admin-ajax.php, so there is
@@ -104,7 +104,7 @@ class DraftsForFriends {
 		if ( is_admin() ) {
 			$this->load_admin();
 
-			new DraftsForFriends_Admin();
+			new WP_DraftsForFriends_Admin();
 		}
 	}
 
@@ -114,8 +114,8 @@ class DraftsForFriends {
 	 * @return void
 	 */
 	private function load_admin() {
-		require_once __DIR__ . '/class-draftsforfriends-table.php';
-		require_once __DIR__ . '/class-draftsforfriends-admin.php';
+		require_once __DIR__ . '/class-wp-draftsforfriends-list-table.php';
+		require_once __DIR__ . '/class-wp-draftsforfriends-admin.php';
 	}
 
 	/**
@@ -126,7 +126,7 @@ class DraftsForFriends {
 	public function ajax() {
 		$this->load_admin();
 
-		DraftsForFriends_Admin::ajax();
+		WP_DraftsForFriends_Admin::ajax();
 	}
 
 	/**

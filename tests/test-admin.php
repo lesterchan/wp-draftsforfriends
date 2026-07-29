@@ -6,9 +6,9 @@
  */
 
 /**
- * DraftsForFriends_Admin and the list table it renders.
+ * WP_DraftsForFriends_Admin and the list table it renders.
  */
-class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
+class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 
 	/**
 	 * An author, who may only touch their own posts.
@@ -51,8 +51,8 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-draftsforfriends-table.php';
-		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-draftsforfriends-admin.php';
+		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-list-table.php';
+		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-admin.php';
 
 		$this->author_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		$this->editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -86,8 +86,8 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		// section registered by one test would otherwise still be there for the
 		// next one -- which is exactly what the "nothing to share" case asserts
 		// is absent.
-		unset( $GLOBALS['wp_settings_sections'][ DraftsForFriends_Admin::SLUG ] );
-		unset( $GLOBALS['wp_settings_fields'][ DraftsForFriends_Admin::SLUG ] );
+		unset( $GLOBALS['wp_settings_sections'][ WP_DraftsForFriends_Admin::PAGE ] );
+		unset( $GLOBALS['wp_settings_fields'][ WP_DraftsForFriends_Admin::PAGE ] );
 
 		parent::tear_down();
 	}
@@ -111,7 +111,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		// 6.0 reads it without an isset() guard, so leaving it unset raised a
 		// notice there and nowhere else -- a gap in this fixture, not in the
 		// plugin.
-		$GLOBALS['hook_suffix'] = 'posts_page_' . DraftsForFriends_Admin::SLUG;
+		$GLOBALS['hook_suffix'] = 'posts_page_' . WP_DraftsForFriends_Admin::PAGE;
 		$GLOBALS['menu']        = array();
 		$GLOBALS['submenu']     = array();
 
@@ -134,7 +134,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		);
 
 		try {
-			$admin = new DraftsForFriends_Admin();
+			$admin = new WP_DraftsForFriends_Admin();
 			$admin->add_menu();
 
 			// Core's own hook name, hyphen and all, so it is not ours to rename.
@@ -160,7 +160,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	public function test_screen_renders() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
 		$html  = $this->render();
 
 		$this->assertSame( array(), $this->notices, 'the screen raised PHP diagnostics' );
@@ -180,13 +180,13 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		wp_set_current_user( $this->author_id );
 
 		$html = $this->render();
-		$slug = DraftsForFriends_Admin::SLUG;
+		$slug = WP_DraftsForFriends_Admin::PAGE;
 
 		// What the plugin is actually responsible for: the registration.
-		$this->assertArrayHasKey( DraftsForFriends_Admin::SECTION, $wp_settings_sections[ $slug ] );
+		$this->assertArrayHasKey( WP_DraftsForFriends_Admin::SECTION_SHARE, $wp_settings_sections[ $slug ] );
 		$this->assertSame(
 			array( 'draftsforfriends-post-id', 'draftsforfriends-expires' ),
-			array_keys( $wp_settings_fields[ $slug ][ DraftsForFriends_Admin::SECTION ] )
+			array_keys( $wp_settings_fields[ $slug ][ WP_DraftsForFriends_Admin::SECTION_SHARE ] )
 		);
 
 		// That the screen renders that registration rather than ignoring it.
@@ -212,7 +212,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	public function test_every_control_is_labelled() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
 		$html  = $this->render();
 		$id    = (int) $share->id;
 
@@ -242,7 +242,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	public function test_post_field_renders_standalone() {
 		wp_set_current_user( $this->author_id );
 
-		$admin = new DraftsForFriends_Admin();
+		$admin = new WP_DraftsForFriends_Admin();
 
 		ob_start();
 		$admin->render_post_field( array( 'label_for' => 'draftsforfriends-post-id' ) );
@@ -262,7 +262,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 
 		$html = $this->render();
 
-		$this->assertArrayNotHasKey( DraftsForFriends_Admin::SLUG, (array) $wp_settings_sections );
+		$this->assertArrayNotHasKey( WP_DraftsForFriends_Admin::PAGE, (array) $wp_settings_sections );
 		$this->assertStringNotContainsString( 'id="draftsforfriends-add"', $html );
 		$this->assertStringNotContainsString( 'Share Draft with Friends', $html );
 		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'the list should still render' );
@@ -273,7 +273,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	 */
 	public function test_screen_has_no_leaked_markup() {
 		wp_set_current_user( $this->author_id );
-		DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
 
 		$html = $this->render();
 
@@ -288,7 +288,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	 */
 	public function test_post_title_is_escaped() {
 		wp_set_current_user( $this->author_id );
-		DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
 
 		$html = $this->render();
 
@@ -301,10 +301,10 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	 */
 	public function test_list_is_scoped_by_capability() {
 		wp_set_current_user( $this->editor_id );
-		$editor_share = DraftsForFriends_Shares::create( $this->editor_draft_id, 2, 'h' )['shared'];
+		$editor_share = WP_DraftsForFriends_Shares::create( $this->editor_draft_id, 2, 'h' )['shared'];
 
 		wp_set_current_user( $this->author_id );
-		$author_share = DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
+		$author_share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
 
 		$html = $this->render();
 
@@ -328,7 +328,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	 */
 	public function test_request_arguments_are_constrained( array $get ) {
 		wp_set_current_user( $this->author_id );
-		DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
+		WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' );
 
 		$html = $this->render( $get );
 
@@ -396,7 +396,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	public function test_share_link_is_rendered() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
 		$html  = $this->render();
 
 		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html );
@@ -416,7 +416,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		$submenu         = array();
 		$GLOBALS['menu'] = array();
 
-		$admin = new DraftsForFriends_Admin();
+		$admin = new WP_DraftsForFriends_Admin();
 		$admin->add_menu();
 
 		$slugs = wp_list_pluck( (array) ( $submenu['edit.php'] ?? array() ), 2 );
@@ -437,7 +437,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 		$submenu         = array();
 		$GLOBALS['menu'] = array();
 
-		$admin = new DraftsForFriends_Admin();
+		$admin = new WP_DraftsForFriends_Admin();
 		$admin->add_menu();
 
 		$slugs = wp_list_pluck( (array) ( $submenu['edit.php'] ?? array() ), 2 );
@@ -452,8 +452,8 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	public function test_render_row_standalone() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-		$html  = DraftsForFriends_Table::render_row( $share );
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
+		$html  = WP_DraftsForFriends_List_Table::render_row( $share );
 
 		$this->assertStringContainsString( 'draftsforfriends-current-' . (int) $share->id, $html );
 		$this->assertStringContainsString( $share->hash, $html );
@@ -464,7 +464,7 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	 * Rendering nothing is not an error.
 	 */
 	public function test_render_row_handles_nothing() {
-		$this->assertSame( '', DraftsForFriends_Table::render_row( null ) );
+		$this->assertSame( '', WP_DraftsForFriends_List_Table::render_row( null ) );
 	}
 
 	/**
@@ -473,8 +473,8 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 	public function test_never_extended_reads_na() {
 		wp_set_current_user( $this->author_id );
 
-		$share = DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
-		$html  = DraftsForFriends_Table::render_row( $share );
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 2, 'h' )['shared'];
+		$html  = WP_DraftsForFriends_List_Table::render_row( $share );
 
 		$this->assertStringContainsString( 'N/A', $html );
 	}
