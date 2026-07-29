@@ -177,6 +177,38 @@ class DraftsForFriends {
 	}
 
 	/**
+	 * The plugin's table for the current site.
+	 *
+	 * Built from $wpdb->prefix rather than read from $wpdb->draftsforfriends,
+	 * because uninstall.php reaches drop_table() without the plugin having
+	 * booted, so nothing has registered the name. switch_to_blog() moves the
+	 * prefix, which is what keeps this correct per site on a network.
+	 *
+	 * @return string
+	 */
+	public static function table() {
+		global $wpdb;
+
+		return $wpdb->prefix . 'draftsforfriends';
+	}
+
+	/**
+	 * Drop the table for the current site.
+	 *
+	 * Lives here rather than in uninstall.php so the schema change happens in
+	 * includes/, which is where the shared phpcs.xml accepts a direct database
+	 * call for a plugin that owns a table. %i binds the identifier, which is
+	 * what makes a DROP statement preparable at all.
+	 *
+	 * @return void
+	 */
+	public static function drop_table() {
+		global $wpdb;
+
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', self::table() ) );
+	}
+
+	/**
 	 * Create or update the table for the current site.
 	 *
 	 * @return void
@@ -186,7 +218,7 @@ class DraftsForFriends {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		$table   = $wpdb->prefix . 'draftsforfriends';
+		$table   = self::table();
 		$collate = $wpdb->get_charset_collate();
 
 		dbDelta(

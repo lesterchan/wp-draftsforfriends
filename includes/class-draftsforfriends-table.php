@@ -113,12 +113,13 @@ class DraftsForFriends_Table extends WP_List_Table {
 		$per_page = $this->get_items_per_page( 'draftsforfriends_per_page', self::PER_PAGE );
 		$paged    = max( 1, (int) $this->get_pagenum() );
 
-		// Sorting and paging arguments on a read-only list screen. There is no
-		// form here and nothing is written, so there is no nonce to check.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// Sorting and paging arguments on a read-only list screen. A sortable
+		// column header is a link core builds by swapping orderby and order on
+		// the current URL, so it carries no nonce and there is none to verify --
+		// which is why the shared phpcs.xml relaxes that sniff for *-table.php
+		// across the whole collection rather than here.
 		$orderby = isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'date_created';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$order = isset( $_GET['order'] ) ? sanitize_key( wp_unslash( $_GET['order'] ) ) : 'desc';
+		$order   = isset( $_GET['order'] ) ? sanitize_key( wp_unslash( $_GET['order'] ) ) : 'desc';
 
 		$total = DraftsForFriends_Shares::count();
 

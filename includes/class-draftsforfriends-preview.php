@@ -59,15 +59,12 @@ class DraftsForFriends_Preview {
 	 * @return string
 	 */
 	private function requested_hash() {
-		// A public read-only check on a link handed to someone who is not logged
-		// in. There is no form and no state change here, so there is no nonce to
-		// verify; the hash is the credential.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A read-only check on a link handed to someone who is not logged in; there is no form to carry a nonce and the hash is itself the credential.
 		if ( empty( $_GET['draftsforfriends'] ) ) {
 			return '';
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- As above: the hash in the URL is the credential and nothing here writes.
 		return sanitize_text_field( wp_unslash( $_GET['draftsforfriends'] ) );
 	}
 

@@ -107,23 +107,19 @@ class DraftsForFriends_Shares {
 	}
 
 	/**
-	 * SQL restricting rows to the current user, unless they may edit others' posts.
+	 * Whether the current user may see every share on the site.
 	 *
-	 * Returned with a leading space so it can be concatenated onto a WHERE clause.
-	 * The value is an integer from get_current_user_id(), never request data.
+	 * Returned as 1 or 0 rather than a boolean so it can be bound with %d into
+	 * the `( %d = 1 OR d.user_id = %d )` clause every query below carries. That
+	 * shape is what lets each query be one complete literal string with every
+	 * value bound: before 2.0.0 the scope was concatenated on as a pre-built
+	 * SQL fragment, which meant $wpdb->prepare() was handed an expression rather
+	 * than a literal and four call sites needed a suppression to say so.
 	 *
-	 * @param string $alias Table alias to qualify the column with, for the queries
-	 *                      that join wp_posts. Empty for queries on the bare table.
-	 * @return string
+	 * @return int 1 when the user may see everything, 0 when scoped to their own.
 	 */
-	private static function scope( $alias = '' ) {
-		if ( current_user_can( 'edit_others_posts' ) ) {
-			return '';
-		}
-
-		$column = '' === $alias ? 'user_id' : $alias . '.user_id';
-
-		return ' AND ' . $column . ' = ' . get_current_user_id();
+	private static function sees_every_share() {
+		return current_user_can( 'edit_others_posts' ) ? 1 : 0;
 	}
 
 	/**
@@ -141,8 +137,14 @@ class DraftsForFriends_Shares {
 			return null;
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- scope() emits an integer from get_current_user_id().
-		return $wpdb->get_row( $wpdb->prepare( "SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE d.id = %d" . self::scope( 'd' ), $id ) );
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE d.id = %d AND ( %d = 1 OR d.user_id = %d )",
+				$id,
+				self::sees_every_share(),
+				get_current_user_id()
+			)
+		);
 	}
 
 	/**
@@ -157,8 +159,13 @@ class DraftsForFriends_Shares {
 		// the bare table let a share whose post had been deleted inflate the total
 		// while never appearing in the list, which threw off the item count and
 		// left the last page of the list table short.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- scope() emits an integer from get_current_user_id().
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE 1=1" . self::scope( 'd' ) );
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE ( %d = 1 OR d.user_id = %d )",
+				self::sees_every_share(),
+				get_current_user_id()
+			)
+		);
 	}
 
 	/**
@@ -190,12 +197,38 @@ class DraftsForFriends_Shares {
 		global $wpdb;
 
 		$orderby = in_array( $orderby, self::SORTABLE, true ) ? $orderby : 'date_created';
-		$order   = 'asc' === strtolower( $order ) ? 'ASC' : 'DESC';
 
-		// $orderby and $order are both constrained to literals above; neither can
-		// be bound as a placeholder, and %i needs WP 6.2 while this plugin is 6.0.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- see above.
-		return $wpdb->get_results( $wpdb->prepare( "SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE 1=1" . self::scope( 'd' ) . " ORDER BY {$orderby} {$order} LIMIT %d, %d", $offset, $limit ) );
+		// The column goes through prepare()'s %i identifier placeholder, which
+		// needs WordPress 6.2 and so was unavailable while the floor was 6.0.
+		// The allow list above still stands: %i quotes an identifier but does not
+		// check it is a column this table has.
+		//
+		// The direction cannot be bound at all -- ASC and DESC are syntax, not
+		// values -- so it picks between two complete literal statements rather
+		// than being interpolated into one.
+		if ( 'asc' === strtolower( (string) $order ) ) {
+			return $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE ( %d = 1 OR d.user_id = %d ) ORDER BY %i ASC LIMIT %d, %d",
+					self::sees_every_share(),
+					get_current_user_id(),
+					$orderby,
+					$offset,
+					$limit
+				)
+			);
+		}
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE ( %d = 1 OR d.user_id = %d ) ORDER BY %i DESC LIMIT %d, %d",
+				self::sees_every_share(),
+				get_current_user_id(),
+				$orderby,
+				$offset,
+				$limit
+			)
+		);
 	}
 
 	/**
@@ -301,11 +334,12 @@ class DraftsForFriends_Shares {
 
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- scope() emits an integer from get_current_user_id().
-				"UPDATE {$wpdb->draftsforfriends} SET date_extended = %s, date_expired = %s WHERE id = %d" . self::scope(),
+				"UPDATE {$wpdb->draftsforfriends} SET date_extended = %s, date_expired = %s WHERE id = %d AND ( %d = 1 OR user_id = %d )",
 				current_time( 'mysql', 1 ),
 				gmdate( 'Y-m-d H:i:s', $new_expiry ),
-				$id
+				$id,
+				self::sees_every_share(),
+				get_current_user_id()
 			)
 		);
 
@@ -341,8 +375,14 @@ class DraftsForFriends_Shares {
 			return array( 'error' => __( 'You do not have permission to delete the shared draft for this post.', 'wp-draftsforfriends' ) );
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- scope() emits an integer from get_current_user_id().
-		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->draftsforfriends} WHERE id = %d" . self::scope(), $id ) );
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->draftsforfriends} WHERE id = %d AND ( %d = 1 OR user_id = %d )",
+				$id,
+				self::sees_every_share(),
+				get_current_user_id()
+			)
+		);
 
 		if ( ! $deleted ) {
 			return array( 'error' => __( 'Error deleting shared draft', 'wp-draftsforfriends' ) );

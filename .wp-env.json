@@ -4,9 +4,9 @@
 	"plugins": [
 		"."
 	],
-	"phpVersion": "7.4",
-	"port": 8894,
-	"testsPort": 8895,
+	"phpVersion": "8.2",
+	"port": 8900,
+	"testsPort": 8901,
 	"config": {
 		"WP_DEBUG": true,
 		"WP_DEBUG_DISPLAY": true,

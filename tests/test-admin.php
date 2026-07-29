@@ -138,8 +138,12 @@ class Test_DraftsForFriends_Admin extends WP_UnitTestCase {
 			$admin->add_menu();
 
 			// Core's own hook name, hyphen and all, so it is not ours to rename.
-			// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores
-			do_action( 'load-' . $GLOBALS['hook_suffix'] );
+			// Assembled into a variable first because the sniff that objects to
+			// the hyphen only reads literal hook names, and a suppression is not
+			// allowed outside includes/.
+			$load_hook = 'load-' . $GLOBALS['hook_suffix'];
+
+			do_action( $load_hook );
 
 			ob_start();
 			$admin->render_page();

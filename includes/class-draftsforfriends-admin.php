@@ -312,9 +312,7 @@ class DraftsForFriends_Admin {
 			<?php if ( '' !== $fields ) : ?>
 				<form id="draftsforfriends-add">
 					<?php
-					// Already-escaped markup from do_settings_sections() and the
-					// field callbacks above.
-					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Already-escaped markup from do_settings_sections() and the field callbacks above.
 					echo $fields;
 					?>
 					<?php submit_button( __( 'Go', 'wp-draftsforfriends' ), 'primary', 'draftsforfriends_submit', true, array( 'id' => 'draftsforfriends-submit' ) ); ?>

@@ -20,7 +20,7 @@ class Test_DraftsForFriends_Uninstall extends WP_UnitTestCase {
 
 		$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) );
 
-		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+		$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ) );
 
 		foreach ( array( 'id', 'post_id', 'user_id', 'hash', 'date_created', 'date_extended', 'date_expired' ) as $column ) {
 			$this->assertContains( $column, $columns );
@@ -47,10 +47,10 @@ class Test_DraftsForFriends_Uninstall extends WP_UnitTestCase {
 		$plugin = DraftsForFriends::get_instance();
 
 		$plugin->maybe_upgrade_table();
-		$before = $wpdb->get_var( "SHOW CREATE TABLE {$wpdb->prefix}draftsforfriends", 1 );
+		$before = $wpdb->get_var( $wpdb->prepare( 'SHOW CREATE TABLE %i', $wpdb->prefix . 'draftsforfriends' ), 1 );
 
 		$plugin->maybe_upgrade_table();
-		$after = $wpdb->get_var( "SHOW CREATE TABLE {$wpdb->prefix}draftsforfriends", 1 );
+		$after = $wpdb->get_var( $wpdb->prepare( 'SHOW CREATE TABLE %i', $wpdb->prefix . 'draftsforfriends' ), 1 );
 
 		$this->assertSame( $before, $after );
 	}

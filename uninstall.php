@@ -12,6 +12,8 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit();
 }
 
+require_once __DIR__ . '/includes/class-draftsforfriends.php';
+
 /**
  * Delete the plugin's options for the current site.
  *
@@ -27,13 +29,7 @@ function draftsforfriends_delete_options() {
  * @return void
  */
 function draftsforfriends_drop_table() {
-	global $wpdb;
-
-	// The table name is built entirely from $wpdb->prefix and a literal, so there
-	// is no user input to prepare. Identifiers cannot be bound anyway.
-	$table = $wpdb->prefix . 'draftsforfriends';
-
-	$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
+	DraftsForFriends::drop_table();
 }
 
 if ( is_multisite() ) {
