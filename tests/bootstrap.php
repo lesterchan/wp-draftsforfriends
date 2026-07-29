@@ -65,6 +65,19 @@ require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-admin.php
 require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-settings.php';
 
 /*
+ * Create the table and write the option rows once, before any test runs.
+ *
+ * wp-env activates the plugin in the tests environment, so the activation hook
+ * has usually already done this -- but relying on that makes the whole suite
+ * depend on how the container was brought up, and the failure is a fatal on the
+ * first query rather than anything that names its cause. maybe_upgrade() is
+ * idempotent, and running it here also means the option rows exist outside any
+ * test's transaction rather than being created and rolled back by whichever test
+ * happened to go first.
+ */
+WP_DraftsForFriends_Install::maybe_upgrade();
+
+/*
  * Discovery is by the test- prefix, so nothing else in tests/ is loaded for us:
  * the shared test case has to be required explicitly.
  */

@@ -147,14 +147,10 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 		$_REQUEST = array_merge( $get, $post );
 
 		/*
-		 * A real admin request always has $hook_suffix set by the time a screen
-		 * renders, and WP_List_Table reaches for it through WP_Screen. Set here
-		 * rather than in the plugin: standing in for admin.php is the fixture's
-		 * job.
-		 *
-		 * $admin_page_hooks is what wp-admin/includes/menu.php fills in, and
-		 * add_menu_page() reads it to decide the hook suffix it registers the load
-		 * hook on.
+		 * A real admin request always has $hook_suffix set and a current screen by
+		 * the time a page callback runs, and WP_List_Table reaches for both through
+		 * WP_Screen. Set here rather than in the plugin: standing in for admin.php
+		 * is the fixture's job.
 		 */
 		$this->register_admin_menu();
 

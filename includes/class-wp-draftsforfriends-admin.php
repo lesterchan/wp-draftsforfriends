@@ -410,10 +410,11 @@ class WP_DraftsForFriends_Admin {
 		self::handle_add();
 		self::handle_bulk();
 
-		// The memo is cleared afterwards rather than before: a draft that has just
-		// been shared is still a draft and still belongs in the picker, but a
-		// request that arrives while the list is being rebuilt should not be shown
-		// a picker assembled before its own write.
+		// Cleared after the writes rather than before them, because the memo is
+		// static: in a browser it lives for one request, but in a test run or under
+		// WP-CLI the same process renders the screen repeatedly, sometimes as a
+		// different user. Clearing here means the picker is always assembled for
+		// whoever is looking at it now.
 		self::$groups = null;
 	}
 
