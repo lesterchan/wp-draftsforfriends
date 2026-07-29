@@ -36,7 +36,7 @@ export function loadScript() {
 	// Resolved from the project root rather than import.meta.url: under the jsdom
 	// environment that is an http: URL, which readFileSync will not take.
 	const src = readFileSync(
-		resolve( process.cwd(), 'js/draftsforfriends-admin.js' ),
+		resolve( process.cwd(), 'js/wp-draftsforfriends-admin.js' ),
 		'utf8',
 	);
 

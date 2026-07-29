@@ -250,14 +250,14 @@ class DraftsForFriends_Admin {
 
 		wp_enqueue_style(
 			'draftsforfriends-admin',
-			WP_DRAFTSFORFRIENDS_URL . 'css/draftsforfriends-admin.css',
+			WP_DRAFTSFORFRIENDS_URL . 'css/wp-draftsforfriends-admin.css',
 			array(),
 			WP_DRAFTSFORFRIENDS_VERSION
 		);
 
 		wp_enqueue_script(
 			'draftsforfriends-admin',
-			WP_DRAFTSFORFRIENDS_URL . 'js/draftsforfriends-admin.js',
+			WP_DRAFTSFORFRIENDS_URL . 'js/wp-draftsforfriends-admin.js',
 			array(),
 			WP_DRAFTSFORFRIENDS_VERSION,
 			true

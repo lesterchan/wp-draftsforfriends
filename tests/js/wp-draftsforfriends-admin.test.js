@@ -6,7 +6,7 @@
  * implementation.
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bodyOf, l10n, loadScript, rowMarkup, screenMarkup } from './helpers.mjs';
+import { bodyOf, l10n, loadScript, rowMarkup, screenMarkup } from './helper-dom.js';
 
 /**
  * Resolve fetch with a plugin response body.
