@@ -82,13 +82,6 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 		$_GET     = array();
 		$_REQUEST = array();
 
-		// The Settings API registry is a global that outlives a test, so a
-		// section registered by one test would otherwise still be there for the
-		// next one -- which is exactly what the "nothing to share" case asserts
-		// is absent.
-		unset( $GLOBALS['wp_settings_sections'][ WP_DraftsForFriends_Admin::PAGE ] );
-		unset( $GLOBALS['wp_settings_fields'][ WP_DraftsForFriends_Admin::PAGE ] );
-
 		parent::tear_down();
 	}
 
@@ -96,8 +89,8 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 	 * Render the screen, collecting any diagnostics it raises.
 	 *
 	 * The screen is driven the way wp-admin drives it: the menu is registered,
-	 * the page's load hook fires -- which is where the add form's fields are
-	 * registered with the Settings API -- and only then does the page render.
+	 * the page's load hook fires -- which is where the per-page screen option is
+	 * offered -- and only then does the page render.
 	 *
 	 * @param array $get Query arguments the request arrived with.
 	 * @return string The rendered markup.
@@ -171,10 +164,10 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The add form is registered with the Settings API rather than written out
-	 * by hand, and it is core that turns that registration into markup.
+	 * The add form is the screen's own markup, and the Settings API is left for
+	 * the settings screen that actually saves a setting.
 	 */
-	public function test_add_form_comes_from_the_settings_api() {
+	public function test_add_form_is_the_screens_own_markup() {
 		global $wp_settings_sections, $wp_settings_fields;
 
 		wp_set_current_user( $this->author_id );
@@ -182,18 +175,10 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 		$html = $this->render();
 		$slug = WP_DraftsForFriends_Admin::PAGE;
 
-		// What the plugin is actually responsible for: the registration.
-		$this->assertArrayHasKey( WP_DraftsForFriends_Admin::SECTION_SHARE, $wp_settings_sections[ $slug ] );
-		$this->assertSame(
-			array( 'draftsforfriends-post-id', 'draftsforfriends-expires' ),
-			array_keys( $wp_settings_fields[ $slug ][ WP_DraftsForFriends_Admin::SECTION_SHARE ] )
-		);
+		$this->assertArrayNotHasKey( $slug, (array) $wp_settings_sections, 'the shared drafts screen registered a settings section' );
+		$this->assertArrayNotHasKey( $slug, (array) $wp_settings_fields, 'the shared drafts screen registered a settings field' );
 
-		// That the screen renders that registration rather than ignoring it.
-		// Asserted through the field output and the label_for association --
-		// the contract -- rather than by matching the table markup core wraps
-		// it in, which is core's to change and not this plugin's to pin.
-		$this->assertStringContainsString( 'Share Draft with Friends', $html );
+		$this->assertStringContainsString( 'Share a Draft', $html );
 		$this->assertStringContainsString( '<label for="draftsforfriends-post-id">Choose a draft:</label>', $html );
 		$this->assertStringContainsString( '<label for="draftsforfriends-expires">Share it for:</label>', $html );
 
@@ -203,6 +188,27 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'name="expires"', $html );
 		$this->assertStringContainsString( 'name="measure"', $html );
 		$this->assertStringContainsString( '<optgroup label="Drafts:">', $html );
+		$this->assertStringContainsString( 'value="' . $this->draft_id . '"', $html );
+	}
+
+	/**
+	 * The duration the form starts on is the stored setting, not a hardcoded two
+	 * hours as it was before 2.0.0.
+	 */
+	public function test_add_form_starts_on_the_configured_duration() {
+		wp_set_current_user( $this->author_id );
+
+		WP_DraftsForFriends_Options::update(
+			array(
+				'expires' => 5,
+				'measure' => 'd',
+			)
+		);
+
+		$html = $this->render();
+
+		$this->assertStringContainsString( 'id="draftsforfriends-expires" type="number" min="1" max="9999" step="1" value="5"', $html );
+		$this->assertMatchesRegularExpression( '/<option value="d" selected=/', $html, 'the configured unit is not preselected' );
 	}
 
 	/**
@@ -236,35 +242,15 @@ class WP_DraftsForFriends_Admin_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The draft picker does not depend on registration having filled anything
-	 * in first: it stands on its own.
-	 */
-	public function test_post_field_renders_standalone() {
-		wp_set_current_user( $this->author_id );
-
-		$admin = new WP_DraftsForFriends_Admin();
-
-		ob_start();
-		$admin->render_post_field( array( 'label_for' => 'draftsforfriends-post-id' ) );
-		$html = (string) ob_get_clean();
-
-		$this->assertStringContainsString( '<optgroup label="Drafts:">', $html );
-		$this->assertStringContainsString( 'value="' . $this->draft_id . '"', $html );
-	}
-
-	/**
-	 * With nothing to share, no section is registered and no form is shown.
+	 * With nothing to share, no form is shown.
 	 */
 	public function test_add_form_is_absent_with_nothing_to_share() {
-		global $wp_settings_sections;
-
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
 
 		$html = $this->render();
 
-		$this->assertArrayNotHasKey( WP_DraftsForFriends_Admin::PAGE, (array) $wp_settings_sections );
 		$this->assertStringNotContainsString( 'id="draftsforfriends-add"', $html );
-		$this->assertStringNotContainsString( 'Share Draft with Friends', $html );
+		$this->assertStringNotContainsString( 'Share a Draft', $html );
 		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'the list should still render' );
 	}
 

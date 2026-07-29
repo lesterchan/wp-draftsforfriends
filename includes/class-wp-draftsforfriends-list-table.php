@@ -294,7 +294,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 			?>
 			<label class="screen-reader-text" for="draftsforfriends-measure-<?php echo esc_attr( $id ); ?>"><?php esc_html_e( 'Duration unit', 'wp-draftsforfriends' ); ?></label>
 			<select id="draftsforfriends-measure-<?php echo esc_attr( $id ); ?>" class="draftsforfriends-measure">
-				<?php foreach ( WP_DraftsForFriends_Admin::measures() as $value => $label ) : ?>
+				<?php foreach ( WP_DraftsForFriends_Shares::measures() as $value => $label ) : ?>
 					<option value="<?php echo esc_attr( $value ); ?>" <?php selected( 'h', $value ); ?>><?php echo esc_html( $label ); ?></option>
 				<?php endforeach; ?>
 			</select>

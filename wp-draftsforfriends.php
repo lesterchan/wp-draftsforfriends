@@ -53,6 +53,8 @@ define( 'WP_DRAFTSFORFRIENDS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_DRAFTSFORFRIENDS_URL', plugin_dir_url( __FILE__ ) );
 
 require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-shares.php';
+require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-options.php';
+require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-install.php';
 require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-preview.php';
 require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends.php';
 

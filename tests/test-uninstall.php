@@ -32,10 +32,17 @@ class WP_DraftsForFriends_Uninstall_Test extends WP_UnitTestCase {
 	 */
 	public function test_schema_version_is_recorded() {
 		// Activation does not fire on plugin update, so the check also runs on
-		// admin_init. Either way the option must end up set.
-		WP_DraftsForFriends::get_instance()->maybe_upgrade_table();
+		// admin_init. Either way the markers must end up set.
+		WP_DraftsForFriends_Install::maybe_upgrade();
 
-		$this->assertSame( WP_DRAFTSFORFRIENDS_DB_VERSION, get_option( WP_DraftsForFriends::DB_VERSION_OPTION ) );
+		$this->assertSame(
+			array(
+				'plugin' => WP_DRAFTSFORFRIENDS_VERSION,
+				'db'     => WP_DRAFTSFORFRIENDS_DB_VERSION,
+			),
+			get_option( WP_DraftsForFriends_Options::VERSION ),
+			'the version row does not hold the running version and schema counter'
+		);
 	}
 
 	/**
@@ -44,12 +51,10 @@ class WP_DraftsForFriends_Uninstall_Test extends WP_UnitTestCase {
 	public function test_schema_check_is_idempotent() {
 		global $wpdb;
 
-		$plugin = WP_DraftsForFriends::get_instance();
-
-		$plugin->maybe_upgrade_table();
+		WP_DraftsForFriends_Install::create_table();
 		$before = $wpdb->get_var( $wpdb->prepare( 'SHOW CREATE TABLE %i', $wpdb->prefix . 'draftsforfriends' ), 1 );
 
-		$plugin->maybe_upgrade_table();
+		WP_DraftsForFriends_Install::create_table();
 		$after = $wpdb->get_var( $wpdb->prepare( 'SHOW CREATE TABLE %i', $wpdb->prefix . 'draftsforfriends' ), 1 );
 
 		$this->assertSame( $before, $after );
@@ -117,7 +122,7 @@ class WP_DraftsForFriends_Uninstall_Test extends WP_UnitTestCase {
 	 * The same three guards apply to activation, which carries its own site loop.
 	 */
 	public function test_activation_site_loop_is_correct() {
-		$source = $this->code( 'includes/class-wp-draftsforfriends.php' );
+		$source = $this->code( 'includes/class-wp-draftsforfriends-install.php' );
 
 		$this->assertStringNotContainsString( 'wp_get_sites', $source );
 		$this->assertMatchesRegularExpression( "/'number'\s*=>\s*0/", $source );
@@ -136,6 +141,8 @@ class WP_DraftsForFriends_Uninstall_Test extends WP_UnitTestCase {
 	public function test_uninstall_deletes_the_schema_version_option() {
 		$source = $this->code( 'uninstall.php' );
 
-		$this->assertStringContainsString( WP_DraftsForFriends::DB_VERSION_OPTION, $source, 'uninstall must delete the option the plugin creates' );
+		$this->assertStringContainsString( WP_DraftsForFriends_Options::OPTION, $source, 'uninstall must delete the settings row' );
+		$this->assertStringContainsString( WP_DraftsForFriends_Options::VERSION, $source, 'uninstall must delete the version row' );
+		$this->assertStringContainsString( WP_DraftsForFriends_Install::LEGACY_DB_VERSION, $source, 'uninstall must delete the pre-2.0.0 row as well' );
 	}
 }

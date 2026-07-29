@@ -73,17 +73,31 @@ class WP_DraftsForFriends_Admin {
 	}
 
 	/**
-	 * The durations a share can be measured in.
+	 * The capability required for a given context.
 	 *
-	 * @return array Unit key to translated label.
+	 * Every check in the plugin goes through here or through
+	 * WP_DraftsForFriends_Settings::capability(), so a site that wants to hand
+	 * the screen to somebody else has one place to say so and cannot loosen one
+	 * entry point while leaving another shut.
+	 *
+	 * @param string $context What the capability is being checked for.
+	 * @return string The required capability.
 	 */
-	public static function measures() {
-		return array(
-			's' => __( 'seconds', 'wp-draftsforfriends' ),
-			'm' => __( 'minutes', 'wp-draftsforfriends' ),
-			'h' => __( 'hours', 'wp-draftsforfriends' ),
-			'd' => __( 'days', 'wp-draftsforfriends' ),
-		);
+	public static function capability( $context = 'shares' ) {
+		/**
+		 * Filters the capability required to reach WP-DraftsForFriends.
+		 *
+		 * The default is publish_posts for the shared drafts screen and
+		 * manage_options for the settings screen. Everything the shared drafts
+		 * screen does is scoped to drafts the user may already edit, so it does
+		 * not ask for the capability that lets somebody reconfigure the site.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param string $capability Capability required.
+		 * @param string $context    What is being gated: 'shares' or 'settings'.
+		 */
+		return apply_filters( 'wp_draftsforfriends_capability', self::CAPABILITY, $context );
 	}
 
 	/**
@@ -96,14 +110,13 @@ class WP_DraftsForFriends_Admin {
 			'edit.php',
 			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
 			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
-			self::CAPABILITY,
+			self::capability( 'shares' ),
 			self::PAGE,
 			array( $this, 'render_page' )
 		);
 
 		if ( $this->hook_suffix ) {
 			add_action( 'load-' . $this->hook_suffix, array( $this, 'add_screen_options' ) );
-			add_action( 'load-' . $this->hook_suffix, array( $this, 'register_fields' ) );
 		}
 	}
 
@@ -127,64 +140,10 @@ class WP_DraftsForFriends_Admin {
 	}
 
 	/**
-	 * Register the add form's section and fields with the Settings API.
-	 *
-	 * The form posts to admin-ajax.php rather than options.php, so there is no
-	 * setting to register and no settings_fields() call: what is wanted here is
-	 * the Settings API as a renderer, so the markup, the label wiring and the
-	 * form-table structure come from core rather than from this plugin.
-	 *
-	 * Nothing is registered when the user has no post to share, which is what
-	 * keeps the whole form off the screen -- render_page() shows the form only
-	 * when the section exists.
-	 *
-	 * @return void
-	 */
-	public function register_fields() {
-		$total = 0;
-
-		foreach ( $this->shareable_groups() as $group ) {
-			$total += $group['count'];
-		}
-
-		if ( ! $total ) {
-			return;
-		}
-
-		add_settings_section(
-			self::SECTION_SHARE,
-			__( 'Share Draft with Friends', 'wp-draftsforfriends' ),
-			'__return_false',
-			self::PAGE
-		);
-
-		add_settings_field(
-			'draftsforfriends-post-id',
-			__( 'Choose a draft:', 'wp-draftsforfriends' ),
-			array( $this, 'render_post_field' ),
-			self::PAGE,
-			self::SECTION_SHARE,
-			array( 'label_for' => 'draftsforfriends-post-id' )
-		);
-
-		add_settings_field(
-			'draftsforfriends-expires',
-			__( 'Share it for:', 'wp-draftsforfriends' ),
-			array( $this, 'render_duration_field' ),
-			self::PAGE,
-			self::SECTION_SHARE,
-			array( 'label_for' => 'draftsforfriends-expires' )
-		);
-	}
-
-	/**
 	 * Posts the current user may share, grouped by status.
 	 *
-	 * Memoised, because registration needs the count to decide whether there is
-	 * a form at all and the field callback needs the posts themselves, and the
-	 * two run in the same request. Reached for through here rather than filled
-	 * in by register_fields() so the callback stands on its own: a field that
-	 * only renders when something else ran first is a trap.
+	 * Memoised, because the form needs the count to decide whether to render at
+	 * all and then needs the posts themselves, both in the same request.
 	 *
 	 * @return array
 	 */
@@ -197,53 +156,92 @@ class WP_DraftsForFriends_Admin {
 	}
 
 	/**
-	 * The draft picker.
+	 * How many posts the current user could share.
 	 *
-	 * @param array $args Field arguments add_settings_field() was given.
+	 * @return int
+	 */
+	private function shareable_count() {
+		$total = 0;
+
+		foreach ( $this->shareable_groups() as $group ) {
+			$total += $group['count'];
+		}
+
+		return $total;
+	}
+
+	/**
+	 * The form a draft is shared from.
+	 *
+	 * Plain markup rather than the Settings API's section and field registration.
+	 * Before 2.0.0 those were borrowed purely as a renderer -- the form saves no
+	 * setting and posts nowhere near options.php -- which put a settings section
+	 * and two settings fields on a screen that has no settings, and §4.2 reserves
+	 * all three for the class that owns register_setting(). The real settings, and
+	 * every field registration in the plugin, are in
+	 * WP_DraftsForFriends_Settings.
+	 *
+	 * Nothing is rendered when the user has no post to share, because a form
+	 * whose only control is an empty dropdown is worse than no form.
+	 *
 	 * @return void
 	 */
-	public function render_post_field( $args ) {
+	private function render_add_form() {
+		if ( ! $this->shareable_count() ) {
+			return;
+		}
+
+		$expires = (int) WP_DraftsForFriends_Options::get( 'expires' );
+		$measure = (string) WP_DraftsForFriends_Options::get( 'measure' );
 		?>
-		<select name="post_id" id="<?php echo esc_attr( $args['label_for'] ); ?>">
-			<option value=""></option>
-			<?php foreach ( $this->shareable_groups() as $group ) : ?>
-				<?php if ( ! $group['count'] ) : ?>
-					<?php continue; ?>
-				<?php endif; ?>
-				<optgroup label="<?php echo esc_attr( $group['label'] ); ?>">
-					<?php foreach ( $group['posts'] as $post ) : ?>
-						<?php if ( '' === trim( (string) $post->post_title ) ) : ?>
+		<h2><?php esc_html_e( 'Share a Draft', 'wp-draftsforfriends' ); ?></h2>
+
+		<form id="draftsforfriends-add" method="post" action="<?php echo esc_url( self::page_url() ); ?>">
+			<p>
+				<label for="draftsforfriends-post-id"><?php esc_html_e( 'Choose a draft:', 'wp-draftsforfriends' ); ?></label>
+				<select name="post_id" id="draftsforfriends-post-id">
+					<option value=""></option>
+					<?php foreach ( $this->shareable_groups() as $group ) : ?>
+						<?php if ( ! $group['count'] ) : ?>
 							<?php continue; ?>
 						<?php endif; ?>
-						<option value="<?php echo esc_attr( $post->ID ); ?>"><?php echo esc_html( $post->post_title ); ?></option>
+						<optgroup label="<?php echo esc_attr( $group['label'] ); ?>">
+							<?php foreach ( $group['posts'] as $post ) : ?>
+								<?php if ( '' === trim( (string) $post->post_title ) ) : ?>
+									<?php continue; ?>
+								<?php endif; ?>
+								<option value="<?php echo esc_attr( $post->ID ); ?>"><?php echo esc_html( $post->post_title ); ?></option>
+							<?php endforeach; ?>
+						</optgroup>
 					<?php endforeach; ?>
-				</optgroup>
-			<?php endforeach; ?>
-		</select>
+				</select>
+			</p>
+			<p>
+				<label for="draftsforfriends-expires"><?php esc_html_e( 'Share it for:', 'wp-draftsforfriends' ); ?></label>
+				<input name="expires" id="draftsforfriends-expires" type="number" min="1" max="9999" step="1" value="<?php echo esc_attr( $expires ); ?>" class="small-text" />
+				<?php
+				// The visible label belongs to the number input, so the unit needs
+				// one of its own or it is announced as an unlabelled combo box.
+				?>
+				<label class="screen-reader-text" for="draftsforfriends-measure"><?php esc_html_e( 'Duration unit', 'wp-draftsforfriends' ); ?></label>
+				<select name="measure" id="draftsforfriends-measure">
+					<?php foreach ( WP_DraftsForFriends_Shares::measures() as $value => $label ) : ?>
+						<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $measure, $value ); ?>><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</p>
+			<?php submit_button( __( 'Share Draft', 'wp-draftsforfriends' ), 'primary', 'draftsforfriends_submit', false, array( 'id' => 'draftsforfriends-submit' ) ); ?>
+		</form>
 		<?php
 	}
 
 	/**
-	 * The duration, and the unit it is measured in.
+	 * The screen's own URL.
 	 *
-	 * @param array $args Field arguments add_settings_field() was given.
-	 * @return void
+	 * @return string
 	 */
-	public function render_duration_field( $args ) {
-		?>
-		<input name="expires" id="<?php echo esc_attr( $args['label_for'] ); ?>" type="number" min="1" step="1" value="2" class="small-text" />
-		<?php
-		// The field's own label, the one label_for wires up, belongs to the
-		// number input. Without this the unit is announced as an unlabelled
-		// combo box.
-		?>
-		<label class="screen-reader-text" for="draftsforfriends-measure"><?php esc_html_e( 'Duration unit', 'wp-draftsforfriends' ); ?></label>
-		<select name="measure" id="draftsforfriends-measure">
-			<?php foreach ( self::measures() as $value => $label ) : ?>
-				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( 'h', $value ); ?>><?php echo esc_html( $label ); ?></option>
-			<?php endforeach; ?>
-		</select>
-		<?php
+	public static function page_url() {
+		return add_query_arg( 'page', self::PAGE, admin_url( 'admin.php' ) );
 	}
 
 	/**
@@ -296,37 +294,19 @@ class WP_DraftsForFriends_Admin {
 	 * @return void
 	 */
 	public function render_page() {
-		if ( ! current_user_can( self::CAPABILITY ) ) {
+		if ( ! current_user_can( self::capability( 'shares' ) ) ) {
 			wp_die( esc_html__( 'You do not have permission to manage shared drafts.', 'wp-draftsforfriends' ) );
 		}
 
 		$table = new WP_DraftsForFriends_List_Table();
 		$table->prepare_items();
-
-		// Rendered up front so the form element is only emitted when the
-		// Settings API actually produced something to put in it -- which is the
-		// case when the user has nothing to share and register_fields()
-		// therefore registered no section. Asking the output rather than the
-		// $wp_settings_sections global also means a third party that adds a
-		// field to this page gets a form to put it in.
-		ob_start();
-		do_settings_sections( self::PAGE );
-		$fields = (string) ob_get_clean();
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Drafts for Friends', 'wp-draftsforfriends' ); ?></h1>
 
 			<div id="draftsforfriends-message" class="notice" style="display: none;"><p></p></div>
 
-			<?php if ( '' !== $fields ) : ?>
-				<form id="draftsforfriends-add">
-					<?php
-					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Already-escaped markup from do_settings_sections() and the field callbacks above.
-					echo $fields;
-					?>
-					<?php submit_button( __( 'Go', 'wp-draftsforfriends' ), 'primary', 'draftsforfriends_submit', true, array( 'id' => 'draftsforfriends-submit' ) ); ?>
-				</form>
-			<?php endif; ?>
+			<?php $this->render_add_form(); ?>
 
 			<h2><?php esc_html_e( 'Currently Shared Drafts', 'wp-draftsforfriends' ); ?></h2>
 			<?php $table->display(); ?>
@@ -343,7 +323,7 @@ class WP_DraftsForFriends_Admin {
 		// Gate the endpoint before any request data is read. The per-post checks
 		// in WP_DraftsForFriends_Shares stay: this is the coarse "may you use this
 		// screen at all" test.
-		if ( ! current_user_can( self::CAPABILITY ) ) {
+		if ( ! current_user_can( self::capability( 'shares' ) ) ) {
 			wp_send_json( array( 'error' => __( 'You do not have permission to manage shared drafts.', 'wp-draftsforfriends' ) ) );
 		}
 

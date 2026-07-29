@@ -43,6 +43,25 @@ class WP_DraftsForFriends_Shares {
 	);
 
 	/**
+	 * The durations a share can be measured in.
+	 *
+	 * Here rather than on the admin class, which is where it sat before 2.0.0:
+	 * the keys are UNITS' keys, so the labels belong beside the list they label
+	 * and neither the settings screen nor the list table has to reach into an
+	 * admin-only class for them.
+	 *
+	 * @return array Unit key to translated label.
+	 */
+	public static function measures() {
+		return array(
+			's' => __( 'seconds', 'wp-draftsforfriends' ),
+			'm' => __( 'minutes', 'wp-draftsforfriends' ),
+			'h' => __( 'hours', 'wp-draftsforfriends' ),
+			'd' => __( 'days', 'wp-draftsforfriends' ),
+		);
+	}
+
+	/**
 	 * How long a share lasts, in seconds.
 	 *
 	 * Falls back to a minute for a non-positive duration and to minutes for an
