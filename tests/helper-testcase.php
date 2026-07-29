@@ -230,6 +230,10 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 					'expires'              => 2,
 					'measure'              => 'h',
 					'_wpnonce'             => wp_create_nonce( WP_DraftsForFriends_Admin::NONCE_ADD ),
+					// wp_nonce_field() emits this alongside the nonce, so a real
+					// submission always carries it and check_admin_referer() has a
+					// referer to read rather than a false to coerce.
+					'_wp_http_referer'     => '/wp-admin/admin.php?page=' . WP_DraftsForFriends_Admin::PAGE,
 				),
 				$fields
 			)
@@ -249,9 +253,10 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 			array(),
 			array_merge(
 				array(
-					'action'   => $action,
-					'shares'   => array_map( 'strval', $ids ),
-					'_wpnonce' => wp_create_nonce( WP_DraftsForFriends_Admin::NONCE_BULK ),
+					'action'           => $action,
+					'shares'           => array_map( 'strval', $ids ),
+					'_wpnonce'         => wp_create_nonce( WP_DraftsForFriends_Admin::NONCE_BULK ),
+					'_wp_http_referer' => '/wp-admin/admin.php?page=' . WP_DraftsForFriends_Admin::PAGE,
 				),
 				$fields
 			)

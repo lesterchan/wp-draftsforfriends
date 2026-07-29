@@ -119,7 +119,7 @@ export function screenMarkup( rows = [] ) {
 /**
  * One row of the list table.
  *
- * @param {Object} row Share row, as { id, title }.
+ * @param {Object} row Share row, as { id, title } with an optional link.
  * @return {string} The markup.
  */
 export function rowMarkup( row ) {

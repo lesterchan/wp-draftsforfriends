@@ -60,6 +60,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertStringContainsString( 'id="draftsforfriends-add"', $html );
 		$this->assertStringContainsString( 'name="_wpnonce"', $html, 'the add form posts without a nonce field' );
+		$this->assertStringContainsString( 'name="_wp_http_referer"', $html, 'wp_nonce_field() should emit the referer field too' );
 		$this->assertStringContainsString( 'name="draftsforfriends_add"', $html, 'the submit button does not identify the form' );
 	}
 
