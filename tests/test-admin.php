@@ -77,7 +77,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$html = $this->render_admin_page();
 
 		$this->assertStringContainsString( 'id="draftsforfriends-expires" type="number" min="1" max="9999" step="1" value="5"', $html );
-		$this->assertStringContainsString( '<option value="d" selected=', $html, 'the configured unit is not preselected' );
+		$this->assert_option_selected( 'd', $html, 'the configured unit is not preselected' );
 	}
 
 	public function test_the_add_form_is_absent_with_nothing_to_share() {
@@ -239,7 +239,14 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 	public function test_the_menu_is_one_top_level_entry_with_settings_last() {
 		global $menu, $submenu;
 
-		wp_set_current_user( $this->editor_id );
+		// An administrator, not an editor. Unlike add_menu_page(),
+		// add_submenu_page() checks current_user_can() and returns false without
+		// recording the entry, so an editor -- who has publish_posts but not
+		// manage_options -- correctly never sees the Settings submenu at all.
+		// Asserting the §4.1 ordering as an editor was asserting it against a menu
+		// with the second entry legitimately missing. That an editor does not get
+		// Settings is its own test below.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
 		$this->register_admin_menu();
 
@@ -279,7 +286,34 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->register_admin_menu();
 
-		$this->assertNotContains( WP_DraftsForFriends_Admin::PAGE, wp_list_pluck( (array) $menu, 2 ) );
+		/*
+		 * add_menu_page() does not consult the current user. It records the
+		 * required capability as element 1 of the menu item and WordPress enforces
+		 * it later, in _wp_menu_output(), which is why the entry is in $menu even
+		 * for a subscriber. Asserting its absence was asserting something
+		 * WordPress does not do -- and it would have kept passing had the
+		 * capability been dropped to 'read'. What is worth asserting is that the
+		 * recorded capability is the plugin's and that a subscriber lacks it.
+		 */
+		$entries = array_values(
+			array_filter(
+				(array) $menu,
+				static function ( $item ) {
+					return isset( $item[2] ) && WP_DraftsForFriends_Admin::PAGE === $item[2];
+				}
+			)
+		);
+
+		$this->assertCount( 1, $entries, 'the plugin should register exactly one top-level menu' );
+		$this->assertSame(
+			WP_DraftsForFriends_Admin::capability( 'shares' ),
+			$entries[0][1],
+			'the menu entry does not demand the shared drafts capability'
+		);
+		$this->assertFalse(
+			current_user_can( $entries[0][1] ),
+			'a subscriber can satisfy the capability the menu demands'
+		);
 	}
 
 	public function test_the_settings_submenu_is_hidden_from_an_author() {

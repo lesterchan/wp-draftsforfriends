@@ -80,7 +80,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertStringContainsString( 'name="wp_draftsforfriends_options[expires]"', $html, 'the field does not post into the settings row' );
 		$this->assertStringContainsString( 'value="6"', $html, 'the stored duration is not shown' );
 		$this->assertStringContainsString( 'name="wp_draftsforfriends_options[measure]"', $html );
-		$this->assertStringContainsString( '<option value="d" selected=', $html, 'the stored unit is not preselected' );
+		$this->assert_option_selected( 'd', $html, 'the stored unit is not preselected' );
 	}
 
 	public function test_the_screen_is_a_settings_api_form_rather_than_hand_written() {
@@ -89,7 +89,14 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 		$html = $this->render_settings_page();
 
 		$this->assertStringContainsString( 'action="options.php"', $html, 'the form must post to options.php' );
-		$this->assertStringContainsString( 'name="option_page" value="' . WP_DraftsForFriends_Settings::GROUP . '"', $html, 'settings_fields() was not called' );
+		// settings_fields() emits single-quoted attributes, so the pairing worth
+		// matching is the field name and the group value, not a double-quoted
+		// spelling core never produces.
+		$this->assertMatchesRegularExpression(
+			'/name=[\'"]option_page[\'"]\s+value=[\'"]' . preg_quote( WP_DraftsForFriends_Settings::GROUP, '/' ) . '[\'"]/',
+			$html,
+			'settings_fields() was not called'
+		);
 
 		// §4.2: do_settings_sections() emits the form table, so the plugin must
 		// not. One <table class="form-table"> is core's; a second would be ours.

@@ -259,7 +259,10 @@ class WP_DraftsForFriends_Metadata_Test extends WP_DraftsForFriends_TestCase {
 		// Both halves matter: a dependency array built at runtime passes a grep,
 		// and a source file using the alias passes a deps check.
 		foreach ( glob( $this->root . '/js/*.js' ) as $file ) {
-			$source = file_get_contents( $file );
+			// Comments stripped: the file's own header records that it was
+			// "Rewritten without jQuery for 2.0.0", which is the opposite of what
+			// a substring search reads it as.
+			$source = $this->js_without_comments( $file );
 
 			$this->assertStringNotContainsString( 'jQuery', $source, basename( $file ) . ' still references jQuery.' );
 			$this->assertStringNotContainsString( '$(', $source, basename( $file ) . ' still uses the jQuery alias.' );

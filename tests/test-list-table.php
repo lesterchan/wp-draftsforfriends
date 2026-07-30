@@ -69,7 +69,22 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 
 		// The deviation §4.3 asks to be justified: a row action is a GET, and both
 		// operations here change state irreversibly or extend public access.
-		$this->assertStringNotContainsString( 'row-actions', $html, 'a row action reappeared; see the class docblock for why there are none' );
+		//
+		// Matched on the container core emits, not on the bare word: every primary
+		// column carries the class has-row-actions whether or not there are any,
+		// because that is what positions the show-more toggle on a narrow screen.
+		// A plain substring search finds that and reports a row action that is not
+		// there.
+		$this->assertStringNotContainsString(
+			'<div class="row-actions"',
+			$html,
+			'a row action reappeared; see the class docblock for why there are none'
+		);
+		$this->assertStringContainsString(
+			'has-row-actions',
+			$html,
+			'core stopped emitting the primary-column class this assertion has to tell itself apart from'
+		);
 	}
 
 	public function test_pagination_is_at_twenty() {
@@ -156,7 +171,7 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertStringContainsString( 'name="extend_expires"', $html );
 		$this->assertStringContainsString( 'value="4"', $html );
 		$this->assertStringContainsString( 'name="extend_measure"', $html );
-		$this->assertStringContainsString( '<option value="d" selected=', $html );
+		$this->assert_option_selected( 'd', $html, 'the configured unit is not preselected' );
 
 		ob_start();
 		$this->invoke( $table, 'extra_tablenav', 'bottom' );

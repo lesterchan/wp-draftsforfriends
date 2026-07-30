@@ -324,4 +324,51 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 	protected function source_without_comments( $file ) {
 		return php_strip_whitespace( WP_DRAFTSFORFRIENDS_DIR . $file );
 	}
+
+	/**
+	 * Assert that a <select> has a given option preselected.
+	 *
+	 * Not a substring match on '<option value="d" selected='. Every one of these
+	 * screens marks the option with core's selected(), which returns
+	 * " selected='selected'" -- single quotes, and a leading space of its own on
+	 * top of the one in the template, so the rendered attribute never matched a
+	 * needle written by hand. The thing worth asserting is that something is
+	 * selected and that it is this value and not another one.
+	 *
+	 * Duplicates are collapsed rather than counted: the shared drafts screen
+	 * carries two duration selects, the add form's and the Extend controls', and
+	 * both start on the same configured unit.
+	 *
+	 * @param string $value   The option value expected to be selected.
+	 * @param string $html    Rendered markup containing the select.
+	 * @param string $message Failure message.
+	 * @return void
+	 */
+	protected function assert_option_selected( $value, $html, $message = '' ) {
+		preg_match_all( '/<option value="([^"]*)"[^>]*\sselected=[^>]*>/', $html, $matches );
+
+		$this->assertSame( array( $value ), array_values( array_unique( $matches[1] ) ), $message );
+	}
+
+	/**
+	 * Read a JavaScript file with its comments removed.
+	 *
+	 * The same reasoning as source_without_comments(), for which there is no
+	 * php_strip_whitespace() equivalent: js/wp-draftsforfriends-admin.js opens by
+	 * recording that it was "Rewritten without jQuery for 2.0.0", which to a
+	 * substring search is jQuery being referenced. Strings are left alone, so a
+	 * jQuery call inside one still shows up.
+	 *
+	 * @param string $file Absolute path to a .js file.
+	 * @return string The source, comments stripped.
+	 */
+	protected function js_without_comments( $file ) {
+		$source = (string) file_get_contents( $file );
+
+		// Block comments first, then line comments, so the // inside a /* */ does
+		// not end up mistaken for the start of one.
+		$source = (string) preg_replace( '#/\*.*?\*/#s', '', $source );
+
+		return (string) preg_replace( '#(^|\s)//.*$#m', '$1', $source );
+	}
 }

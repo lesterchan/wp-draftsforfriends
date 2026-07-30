@@ -133,7 +133,6 @@ class WP_DraftsForFriends_Options {
 			return $defaults;
 		}
 
-		$expires = isset( $input['expires'] ) ? (int) $input['expires'] : 0;
 		$measure = isset( $input['measure'] ) ? sanitize_key( $input['measure'] ) : '';
 
 		/*
@@ -141,9 +140,16 @@ class WP_DraftsForFriends_Options {
 		 * reads as a broken screen rather than as a setting. The upper bound is
 		 * the same one the field advertises; 9999 days is a little over 27 years,
 		 * past which a "temporary" preview link is not temporary.
+		 *
+		 * A value that was not submitted at all is a different case from one that
+		 * was submitted out of range, and falls back to the shipped default rather
+		 * than to the bottom of the range: a form that posted no duration has said
+		 * nothing about it, and answering "one second" is not what it said. This
+		 * is how the measure key beside it already behaved, and how the non-array
+		 * branch above behaves.
 		 */
 		return array(
-			'expires' => max( 1, min( 9999, $expires ) ),
+			'expires' => isset( $input['expires'] ) ? max( 1, min( 9999, (int) $input['expires'] ) ) : $defaults['expires'],
 			'measure' => isset( WP_DraftsForFriends_Shares::UNITS[ $measure ] ) ? $measure : $defaults['measure'],
 		);
 	}
