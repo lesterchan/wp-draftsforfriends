@@ -158,7 +158,7 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 ### 2.0.0
 The first proper release in a decade, and it changes where the plugin lives and how two of its buttons work. Read this before you update.
 
-**Your site needs WordPress 6.8 or later and PHP 8.2 or later.** Below either of those you will not be offered the update at all, and will stay on 1.0.2 indefinitely. If your host still runs PHP 7.4, ask to be moved to a supported version before you update — 7.4 stopped receiving security fixes in 2022.
+**Your site needs WordPress 6.8 or later and PHP 8.2 or later.** Below either of those you will not be offered the update at all, and will stay on 1.0.2 indefinitely. Check `WP-Admin -> Tools -> Site Health -> Info -> Server` for your PHP version; if it is below 8.2, ask your host to move you up. PHP 8.1 and everything before it stopped receiving security fixes.
 
 **Update for the security fixes even if nothing else here applies to you.** Three of them matter:
 
