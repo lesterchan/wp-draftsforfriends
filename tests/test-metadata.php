@@ -373,7 +373,7 @@ class WP_DraftsForFriends_Metadata_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertStringContainsString( 'is_multisite()', $uninstall, 'uninstall.php does not branch on multisite.' );
 		$this->assertStringContainsString( "'number' => 0", $uninstall, 'uninstall.php stops at the default hundred sites.' );
 		$this->assertStringContainsString( "'fields' => 'ids'", $uninstall, 'uninstall.php hydrates whole site objects to read one column.' );
-		$this->assertStringNotContainsString( 'wp_get_sites', $uninstall, 'wp_get_sites() was removed in WordPress 5.1 and fatals.' );
+		$this->assertStringNotContainsString( 'wp_get_sites', $uninstall, 'wp_get_sites() is capped at 100 sites, so a larger network uninstalls in part.' );
 		$this->assertMatchesRegularExpression(
 			'/switch_to_blog\([^}]*restore_current_blog\(\)/s',
 			$uninstall,

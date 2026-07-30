@@ -61,9 +61,9 @@ class WP_DraftsForFriends_Install {
 			return;
 		}
 
-		// wp_get_sites() was removed in WP 5.1 and the floor is 6.8. get_sites()
-		// defaults 'number' to 100, so it is lifted explicitly or every site past
-		// the hundredth silently goes without its table.
+		// get_sites(), not the deprecated wp_get_sites(), which is capped at 100.
+		// get_sites() defaults 'number' to 100 too, so it is lifted explicitly or
+		// every site past the hundredth silently goes without its table.
 		$site_ids = get_sites(
 			array(
 				'fields' => 'ids',

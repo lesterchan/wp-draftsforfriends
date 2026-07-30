@@ -13,8 +13,9 @@
  *
  * Every one of these covers a bug the plugin actually shipped: the table name
  * was assigned rather than registered, so it did not follow switch_to_blog();
- * activation called wp_get_sites(), removed in WordPress 5.1, and fatalled; and
- * the site loop stopped at the hundredth site while still reporting success.
+ * activation called wp_get_sites(), deprecated in WordPress 4.6 and capped at
+ * 100 sites; and the site loop stopped at the hundredth site while still
+ * reporting success.
  *
  * @group ms-required
  */
