@@ -255,7 +255,9 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 				array(
 					'action'           => $action,
 					'shares'           => array_map( 'strval', $ids ),
-					'_wpnonce'         => wp_create_nonce( WP_DraftsForFriends_Admin::NONCE_BULK ),
+					// The nonce core's list table emits, not one of the screen's own: a
+					// second _wpnonce beside it would replace rather than add to it.
+					'_wpnonce'         => wp_create_nonce( ( new WP_DraftsForFriends_List_Table() )->bulk_nonce_action() ),
 					'_wp_http_referer' => '/wp-admin/admin.php?page=' . WP_DraftsForFriends_Admin::PAGE,
 				),
 				$fields

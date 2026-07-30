@@ -103,10 +103,23 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	}
 
 	/**
-	 * Bulk actions.
+	 * The nonce action guarding the bulk form.
 	 *
-	 * Both of the things a share can have done to it, because neither belongs on
-	 * a hover row action -- see the class docblock.
+	 * WP_List_Table::display_tablenav() prints wp_nonce_field() for this action
+	 * itself, in a field named _wpnonce. Printing a second _wpnonce beside it --
+	 * which this screen used to do -- does not add a check, it replaces one: PHP
+	 * keeps the last field of a repeated name, so the plugin's own nonce was
+	 * discarded and every bulk extend or revoke failed with "The link you
+	 * followed has expired". Verify the one core actually emits.
+	 *
+	 * @return string
+	 */
+	public function bulk_nonce_action() {
+		return 'bulk-' . $this->_args['plural'];
+	}
+
+	/**
+	 * The actions offered for the checked rows.
 	 *
 	 * @return array
 	 */

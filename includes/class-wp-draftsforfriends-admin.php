@@ -297,7 +297,8 @@ class WP_DraftsForFriends_Admin {
 
 			<form id="draftsforfriends-list" method="post" action="<?php echo esc_url( self::page_url() ); ?>">
 				<?php
-				wp_nonce_field( self::NONCE_BULK );
+				// No wp_nonce_field() here: $table->display() emits the bulk nonce this
+				// form is checked against, and a second _wpnonce input would override it.
 				$table->display();
 				?>
 			</form>
@@ -451,7 +452,7 @@ class WP_DraftsForFriends_Admin {
 			return;
 		}
 
-		check_admin_referer( self::NONCE_BULK );
+		check_admin_referer( $table->bulk_nonce_action() );
 
 		$ids = isset( $_POST['shares'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['shares'] ) ) : array();
 		$ids = array_values( array_filter( array_unique( $ids ) ) );
