@@ -155,7 +155,7 @@ class WP_DraftsForFriends_Admin {
 	public static function admin_menu() {
 		self::$hook_suffix = add_menu_page(
 			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
-			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
+			__( 'WP-DraftsForFriends', 'wp-draftsforfriends' ),
 			self::capability( 'shares' ),
 			self::PAGE,
 			array( __CLASS__, 'render_page' ),
