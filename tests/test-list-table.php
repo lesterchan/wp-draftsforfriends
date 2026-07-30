@@ -224,8 +224,6 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 	private function invoke( $table, $method, ...$args ) {
 		$reflection = new ReflectionMethod( $table, $method );
 
-		$reflection->setAccessible( true );
-
 		return $reflection->invokeArgs( $table, $args );
 	}
 }
