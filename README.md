@@ -96,7 +96,7 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 ## Changelog
 
 ### 2.0.0
-* BREAKING: Requires WordPress 6.8 and PHP 8.2, up from 6.0 and 7.4. A site below either will not be offered this update.
+* BREAKING: Requires WordPress 6.8 and PHP 8.2, up from 6.0 and 7.4.
 * BREAKING: The screen has moved from `Posts -> Drafts for Friends` at `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to its own top-level `Drafts for Friends` menu at `admin.php?page=wp-draftsforfriends`. Links already sent to friends are not affected.
 * BREAKING: Extend and Delete are no longer links on each row. They are bulk actions named Extend selected and Revoke selected, applied to the rows you tick. A row action is a `GET` and one prefetch away from revoking every share on the page.
 * BREAKING: Removed the `WPDraftsForFriends` class. The plugin is now `WP_DraftsForFriends` plus `WP_DraftsForFriends_Admin`, `_Install`, `_List_Table`, `_Options`, `_Preview`, `_Settings` and `_Shares` under `includes/`.
@@ -130,26 +130,25 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 ## Upgrade Notice
 
 ### 2.0.0
-The first proper release in a decade, and it changes where the plugin lives and how two of its buttons work. Read this before you update.
 
-**Your site needs WordPress 6.8 or later and PHP 8.2 or later.** Below either of those you will not be offered the update at all, and will stay on 1.0.2 indefinitely. Check `WP-Admin -> Tools -> Site Health -> Info -> Server` for your PHP version; if it is below 8.2, ask your host to move you up. PHP 8.1 and everything before it stopped receiving security fixes.
+Requires WordPress 6.8 and PHP 8.2.
 
-**Update for the security fixes even if nothing else here applies to you.** Three of them matter:
+**Three security fixes, which are reason enough on their own:**
 
-* A shared draft could show up where it was not shared. Once one valid preview link had been opened, that post was handed to every later query in the same request that legitimately returned nothing — including a request carrying a wrong, expired or deleted link. So somebody who had once held a link, or who guessed at one, could be served a different unpublished post.
+* A shared draft could be served where it had not been shared. Once one valid preview link had been opened, that post was handed to every later query in the same request that legitimately returned nothing — including one carrying a wrong, expired or deleted link. Somebody who had once held a link, or who guessed at one, could be served a different unpublished post.
 * The post title was written into the admin screen unescaped, so a draft whose title contained markup could put a working script into the screen of anyone able to see that share.
-* Extending and revoking checked your permissions against a post id sent along with the request rather than the one the share actually pointed at, so the two could be paired up to act on somebody else's share.
+* Extending and revoking checked permissions against a post id sent with the request rather than the one the share pointed at, so the two could be paired up to act on somebody else's share.
 
-**The screen has moved, and its address has changed.** It used to be `Posts -> Drafts for Friends`; it is now its own top-level `Drafts for Friends` menu, with the shared drafts list first and Settings second. The address goes from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `admin.php?page=wp-draftsforfriends`, so replace any bookmark you have. The old address had the plugin's folder name inside it, which is why renaming the folder used to break the page.
+**The screen is its own top-level `Drafts for Friends` menu**, shared drafts first and Settings second, at `admin.php?page=wp-draftsforfriends` rather than `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php`. The old address embedded the plugin's folder name, which is why renaming the folder used to break the page.
 
-**Links you have already sent to friends keep working.** They point at the post, not at the admin screen, and their form is unchanged: `?p=<id>&draftsforfriends=<hash>`. Nothing needs re-sending.
+**Links already sent keep working.** They point at the post rather than the admin screen, and their form is unchanged: `?p=<id>&draftsforfriends=<hash>`.
 
-**Extend and Delete are no longer links on each row.** Tick the rows you want, choose **Extend selected** or **Revoke selected** from the dropdown above the list, and press **Apply**. Extend uses the **Extend by** duration sitting beside that dropdown. This is worth the extra click: a row action is a plain link, and a browser that prefetches links or a link checker crawling your admin area would have revoked every share on the page without anybody clicking anything.
+**Extend and Delete are bulk actions, not row links.** Tick the rows, choose **Extend selected** or **Revoke selected**, and press **Apply**; Extend uses the **Extend by** duration beside the dropdown. A row action is a plain link, and a browser that prefetches links or a link checker crawling wp-admin would have revoked every share on the page with nobody clicking anything.
 
-**One behaviour change to be aware of.** Moving a shared post to the trash now revokes its links rather than leaving them working, which makes the obvious way of withdrawing a draft actually withdraw it. Restoring the post from the trash makes the same links work again. Deleting a post permanently now deletes its shares, which used to be left behind and counted towards the total shown above the list even though they were never listed.
+**Trashing a shared post now revokes its links**, and restoring it makes them work again. Deleting a post permanently deletes its shares, which used to be left behind and counted towards the total above the list without ever being listed.
 
-**There is a settings screen now, and an author cannot reach it.** `Drafts for Friends -> Settings` sets the duration a new share starts on, and takes `manage_options`. Sharing itself still takes `publish_posts`, exactly as before, so nobody loses access to anything they could already do.
+**There is a settings screen**, `Drafts for Friends -> Settings`, which requires `manage_options` and sets the duration a new share starts on. Sharing itself still requires `publish_posts`.
 
-**Two smaller things.** The list shows twenty rows at a time rather than fifty, changeable under *Screen Options*, and the sort links no longer use `dff_sortby` and `dff_sortorder`, so a bookmarked sorted URL opens unsorted. The plugin now stores two rows in your database, `wp_draftsforfriends_options` and `wp_draftsforfriends_version`; deleting the plugin from the Plugins screen removes both, removes the older `draftsforfriends_db_version` row, and drops the plugin's table.
+**Smaller changes.** The list shows twenty rows rather than fifty, changeable under *Screen Options*. The sort links no longer use `dff_sortby` and `dff_sortorder`, so a bookmarked sorted URL opens unsorted. The plugin stores `wp_draftsforfriends_options` and `wp_draftsforfriends_version`; deleting it from the Plugins screen removes both, removes the older `draftsforfriends_db_version` row, and drops the plugin's table.
 
-**For anyone who has written code against this plugin.** The `WPDraftsForFriends` class no longer exists — the plugin is `WP_DraftsForFriends` plus seven `WP_DraftsForFriends_*` classes under `includes/` — and the `wp_ajax_draftsforfriends_admin` endpoint has been removed, because every write is now an ordinary form post. There is one new filter, `wp_draftsforfriends_capability`, which decides who may reach each screen. No hook was renamed, because until now the plugin fired none of its own at all.
+**For code written against the plugin.** `WPDraftsForFriends` no longer exists — it is `WP_DraftsForFriends` plus seven `WP_DraftsForFriends_*` classes under `includes/`. The `wp_ajax_draftsforfriends_admin` endpoint is removed, because every write is now an ordinary form post. There is one new filter, `wp_draftsforfriends_capability`, deciding who may reach each screen. No hook was renamed, because the plugin previously fired none of its own.
