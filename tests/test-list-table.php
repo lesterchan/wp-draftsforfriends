@@ -17,7 +17,16 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 	 * @return WP_DraftsForFriends_List_Table
 	 */
 	private function table() {
-		set_current_screen( 'toplevel_page_' . WP_DraftsForFriends_Admin::PAGE );
+		// Somebody who may reach the page: add_posts_page() consults the current
+		// user and records nothing for a logged-out one, so there would be no hook
+		// suffix and no screen for WP_List_Table to find.
+		if ( ! is_user_logged_in() ) {
+			wp_set_current_user( $this->author_id );
+		}
+
+		// The recorded hook suffix, never a hand-built one: the page moved under
+		// Posts and every 'toplevel_page_…' string went stale without erroring.
+		set_current_screen( $this->register_admin_menu() );
 
 		return new WP_DraftsForFriends_List_Table();
 	}

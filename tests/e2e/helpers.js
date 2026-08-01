@@ -19,8 +19,13 @@ const { expect } = require( '@wordpress/e2e-test-utils-playwright' );
 /** The plugin root, which is where wp-env reads .wp-env.json from. */
 const PLUGIN_ROOT = path.join( __dirname, '../..' );
 
-const SHARES_URL = '/wp-admin/admin.php?page=wp-draftsforfriends';
-const SETTINGS_URL = '/wp-admin/admin.php?page=wp-draftsforfriends-settings';
+/*
+ * One page under Posts with two tabs, not two screens. The tab is a query
+ * argument on the same slug, which is why the settings URL is no longer a slug
+ * of its own.
+ */
+const SHARES_URL = '/wp-admin/edit.php?page=wp-draftsforfriends&tab=shares';
+const SETTINGS_URL = '/wp-admin/edit.php?page=wp-draftsforfriends&tab=settings';
 
 /** The units the duration select offers, and what each is worth in seconds. */
 const UNITS = {
@@ -237,15 +242,16 @@ function createDraft( requestUtils, title, status = 'draft', content = 'The unpu
 }
 
 /**
- * Open the shared drafts screen.
+ * Open the Shared Drafts tab.
  *
  * @param {import('@playwright/test').Page} page Page under test.
- * @return {Promise<void>} Resolves once the screen is up.
+ * @return {Promise<void>} Resolves once the tab is up.
  */
 async function openShares( page ) {
 	await page.goto( SHARES_URL );
 
 	await expect( page.getByRole( 'heading', { name: 'Drafts for Friends' } ) ).toBeVisible();
+	await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Shared Drafts' );
 }
 
 /**

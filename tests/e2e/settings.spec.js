@@ -23,36 +23,35 @@ const {
 } = require( './helpers.js' );
 
 /**
- * Open the settings screen.
+ * Open the Settings tab.
+ *
+ * The heading belongs to the page rather than to the tab, so what says the tab
+ * is up is the tab itself being the active one.
  *
  * @param {import('@playwright/test').Page} page Page under test.
- * @return {Promise<void>} Resolves once the screen is up.
+ * @return {Promise<void>} Resolves once the tab is up.
  */
 async function openSettings( page ) {
 	await page.goto( SETTINGS_URL );
 
-	await expect(
-		page.getByRole( 'heading', { name: 'Drafts for Friends Settings' } ),
-	).toBeVisible();
+	await expect( page.getByRole( 'heading', { name: 'Drafts for Friends' } ) ).toBeVisible();
+	await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Settings' );
 }
 
 /**
- * Save the settings form and wait for the screen to come back.
+ * Save the settings form and wait for the tab to come back.
  *
- * The wait is on the heading rather than on a notice, because this screen
- * prints none: it never calls settings_errors(), and WordPress only prints them
- * by itself on the built-in Settings screens. That is asserted as its own test
- * below rather than papered over here.
+ * Back on the same tab, not the first one: options.php sends the browser to
+ * _wp_http_referer, and the form emits one carrying the tab after the one
+ * settings_fields() prints.
  *
  * @param {import('@playwright/test').Page} page Page under test.
- * @return {Promise<void>} Resolves once the screen has come back.
+ * @return {Promise<void>} Resolves once the tab has come back.
  */
 async function saveSettings( page ) {
 	await page.getByRole( 'button', { name: 'Save Changes' } ).click();
 
-	await expect(
-		page.getByRole( 'heading', { name: 'Drafts for Friends Settings' } ),
-	).toBeVisible();
+	await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Settings' );
 }
 
 test.describe( 'Drafts for friends settings', () => {
@@ -175,15 +174,28 @@ test.describe( 'Drafts for friends settings', () => {
 		await page.getByRole( 'button', { name: 'Save Changes' } ).click();
 
 		// options.php registers "Settings saved." under the general slug and
-		// leaves it in a transient for the next screen to print. A settings page
-		// that never calls settings_errors() -- and WordPress only calls it for
-		// you on the built-in Settings screens -- swallows it, so the form saves
-		// in silence and an admin has no way to tell a save from a no-op.
+		// leaves it in a transient for the next screen to print. Core prints it
+		// for you from options-head.php, which admin-header.php includes only
+		// when the parent file is options-general.php -- and this page hangs off
+		// edit.php. So the tab calls settings_errors() itself; without that the
+		// form saves in silence and an admin cannot tell a save from a no-op.
 		await expect( page.locator( '.notice-success, .settings-error' ).first() ).toContainText(
 			'Settings saved.',
 		);
 
 		expect( setting( 'expires' ) ).toBe( '4' );
+	} );
+
+	test( 'a save comes back to the Settings tab rather than the first one', async ( {
+		page,
+	} ) => {
+		await openSettings( page );
+
+		await page.locator( '#wp_draftsforfriends_expires' ).fill( '3' );
+		await page.getByRole( 'button', { name: 'Save Changes' } ).click();
+
+		await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Settings' );
+		await expect( page.locator( '#wp_draftsforfriends_expires' ) ).toHaveValue( '3' );
 	} );
 
 	test( 'the Plugins screen links straight to the settings', async ( { page } ) => {
@@ -195,8 +207,20 @@ test.describe( 'Drafts for friends settings', () => {
 
 		await row.getByRole( 'link', { name: 'Settings' } ).click();
 
-		await expect(
-			page.getByRole( 'heading', { name: 'Drafts for Friends Settings' } ),
-		).toBeVisible();
+		await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Settings' );
+	} );
+
+	test( 'the tabs move between the two halves of the one page', async ( { page } ) => {
+		await openShares( page );
+
+		await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Shared Drafts' );
+
+		await page.locator( '.nav-tab', { hasText: 'Settings' } ).click();
+		await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Settings' );
+		await expect( page.locator( '#wp_draftsforfriends_expires' ) ).toBeVisible();
+
+		await page.locator( '.nav-tab', { hasText: 'Shared Drafts' } ).click();
+		await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Shared Drafts' );
+		await expect( page.locator( '.wp-list-table' ) ).toBeVisible();
 	} );
 } );

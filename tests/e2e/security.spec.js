@@ -25,6 +25,7 @@ const {
 	logInAs,
 	openShares,
 	resetPlugin,
+	setting,
 	shareDraft,
 	uniqueTitle,
 	wpEval,
@@ -243,9 +244,11 @@ test.describe( 'The screens are gated', () => {
 		page,
 		requestUtils,
 	} ) => {
-		// The whole reason the two screens take different capabilities: an author
+		// The whole reason the two tabs take different capabilities: an author
 		// may share their own drafts, and deciding how long everybody's shares
-		// last is a site setting.
+		// last is a site setting. On one page that is three gates rather than
+		// one, and this exercises all three: the tab strip, the tab itself, and
+		// the save.
 		const author = await logInAs( page, requestUtils, 'dff_author', 'author' );
 
 		await author.page.goto( '/wp-admin/index.php' );
@@ -256,21 +259,42 @@ test.describe( 'The screens are gated', () => {
 			author.page.getByRole( 'heading', { name: 'Drafts for Friends' } ),
 		).toBeVisible();
 
-		await expect(
-			author.page.locator( '#adminmenu' ).getByRole( 'link', { name: 'Settings' } ),
-		).toHaveCount( 0 );
+		// One tab, and it is not the settings one.
+		await expect( author.page.locator( '.nav-tab' ) ).toHaveCount( 1 );
+		await expect( author.page.locator( '.nav-tab' ) ).toHaveText( 'Shared Drafts' );
 
 		await author.page.goto( SETTINGS_URL );
 		await expect( author.page.locator( 'body' ) ).toContainText(
 			/not allowed to access this page|do not have permission/,
 		);
 
-		// And an administrator does reach it, so the refusal above is the
+		// And posting the form is refused as well, which is a separate gate:
+		// options.php never goes through the page, so a tab that only hides
+		// itself would leave the save wide open to anybody who can reach the
+		// page at all.
+		const refused = await author.page.evaluate( async () => {
+			const response = await fetch( '/wp-admin/options.php', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: new URLSearchParams( {
+					option_page: 'wp_draftsforfriends_options',
+					action: 'update',
+					'wp_draftsforfriends_options[expires]': '4321',
+				} ).toString(),
+			} );
+
+			return response.status;
+		} );
+
+		expect( refused ).toBeGreaterThanOrEqual( 400 );
+		expect( setting( 'expires' ) ).not.toBe( '4321' );
+
+		// And an administrator does reach it, so the refusals above are the
 		// capability rather than a screen that is broken for everybody.
 		await page.goto( SETTINGS_URL );
-		await expect(
-			page.getByRole( 'heading', { name: 'Drafts for Friends Settings' } ),
-		).toBeVisible();
+		await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Settings' );
+		await expect( page.locator( '#wp_draftsforfriends_expires' ) ).toBeVisible();
 
 		await author.context.close();
 	} );

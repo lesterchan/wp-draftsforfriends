@@ -123,6 +123,17 @@ class WP_DraftsForFriends_Options {
 	 * version markers live in their own row, so there is nothing here to rescue
 	 * and nothing this can corrupt.
 	 *
+	 * §4.2.1 warns that a tabbed plugin's sanitiser must merge the submitted
+	 * subset over the stored row, because a sanitiser handed only one tab's
+	 * fields will otherwise wipe whatever the other tab owns. That trap needs two
+	 * tabs that both save settings, and this plugin has one: the Shared Drafts
+	 * tab is a list table posting to itself, it never reaches options.php, and it
+	 * owns no key in this row. So the sanitiser stays honest -- posted input in,
+	 * clean settings out, per §2.1 -- and the invariant that makes that safe is
+	 * pinned by test_only_one_tab_owns_settings_so_a_save_cannot_wipe_another().
+	 * Add a second settings-bearing tab and that test fails, which is the moment
+	 * the merge has to be written.
+	 *
 	 * @param mixed $input Raw submitted values.
 	 * @return array
 	 */

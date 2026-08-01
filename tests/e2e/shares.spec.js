@@ -163,6 +163,12 @@ test.describe( 'Sharing a draft', () => {
 
 		await expect( page.locator( '.notice-success' ) ).toContainText( '1 shared draft extended.' );
 
+		// A bulk action posts back to the page, so it has to land on the tab it
+		// was submitted from. It does because the form's action carries the tab;
+		// a bulk form posting to the bare page slug would answer on the first tab
+		// by accident and stop doing so the moment the tab order changed.
+		await expect( page.locator( '.nav-tab-active' ) ).toHaveText( 'Shared Drafts' );
+
 		// Both halves of what extending means: the expiry moved out, and the
 		// screen can now say when it was last extended.
 		expect( shareColumn( share.id, 'date_expired' ) > before ).toBe( true );

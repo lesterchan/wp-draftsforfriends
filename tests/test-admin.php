@@ -236,102 +236,260 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		);
 	}
 
-	public function test_the_menu_is_one_top_level_entry_with_settings_last() {
+	public function test_the_menu_is_one_page_under_posts_and_nothing_top_level() {
 		global $menu, $submenu;
 
-		// An administrator, not an editor. Unlike add_menu_page(),
-		// add_submenu_page() checks current_user_can() and returns false without
-		// recording the entry, so an editor -- who has publish_posts but not
-		// manage_options -- correctly never sees the Settings submenu at all.
-		// Asserting the §4.1 ordering as an editor was asserting it against a menu
-		// with the second entry legitimately missing. That an editor does not get
-		// Settings is its own test below.
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
 		$this->register_admin_menu();
 
-		$this->assertContains(
+		$this->assertNotContains(
 			WP_DraftsForFriends_Admin::PAGE,
 			wp_list_pluck( (array) $menu, 2 ),
-			'§4.1 wants one top-level menu for a plugin with data-management screens'
+			'the plugin claims a top-level menu; its one page belongs under Posts'
 		);
 
-		$slugs = wp_list_pluck( (array) ( $submenu[ WP_DraftsForFriends_Admin::PAGE ] ?? array() ), 2 );
+		$slugs = wp_list_pluck( (array) ( $submenu['edit.php'] ?? array() ), 2 );
+
+		$this->assertContains(
+			WP_DraftsForFriends_Admin::PAGE,
+			$slugs,
+			'the page is not registered under Posts'
+		);
 
 		$this->assertSame(
-			array( WP_DraftsForFriends_Admin::PAGE, WP_DraftsForFriends_Settings::PAGE ),
-			$slugs,
-			'§4.1 wants the data screen first and Settings last'
+			1,
+			count( array_keys( $slugs, WP_DraftsForFriends_Admin::PAGE, true ) ),
+			'the plugin registers its page more than once'
 		);
-	}
 
-	public function test_the_menu_slug_does_not_embed_the_directory_name() {
-		global $menu;
-
-		wp_set_current_user( $this->editor_id );
-
-		$this->register_admin_menu();
-
-		foreach ( wp_list_pluck( (array) $menu, 2 ) as $slug ) {
-			$this->assertStringNotContainsString( '.php', (string) $slug, 'the menu slug is still a plugin file name' );
+		// And nowhere else: the settings are a tab of that page, not a second
+		// entry anywhere in the sidebar.
+		foreach ( (array) $submenu as $parent => $entries ) {
+			foreach ( wp_list_pluck( (array) $entries, 2 ) as $slug ) {
+				$this->assertNotSame(
+					WP_DraftsForFriends_Settings::PAGE,
+					$slug,
+					"the settings are a menu entry under '{$parent}' rather than a tab"
+				);
+			}
 		}
-
-		$this->assertSame( WP_DRAFTSFORFRIENDS_SLUG, WP_DraftsForFriends_Admin::PAGE, 'PAGE must be the plugin slug' );
 	}
 
-	public function test_the_menu_requires_the_capability() {
-		global $menu;
+	public function test_the_sidebar_entry_is_the_plugins_name_and_the_heading_is_not() {
+		global $submenu;
 
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
 		$this->register_admin_menu();
 
-		/*
-		 * add_menu_page() does not consult the current user. It records the
-		 * required capability as element 1 of the menu item and WordPress enforces
-		 * it later, in _wp_menu_output(), which is why the entry is in $menu even
-		 * for a subscriber. Asserting its absence was asserting something
-		 * WordPress does not do -- and it would have kept passing had the
-		 * capability been dropped to 'read'. What is worth asserting is that the
-		 * recorded capability is the plugin's and that a subscriber lacks it.
-		 */
 		$entries = array_values(
 			array_filter(
-				(array) $menu,
+				(array) ( $submenu['edit.php'] ?? array() ),
 				static function ( $item ) {
 					return isset( $item[2] ) && WP_DraftsForFriends_Admin::PAGE === $item[2];
 				}
 			)
 		);
 
-		$this->assertCount( 1, $entries, 'the plugin should register exactly one top-level menu' );
+		// §4.1: the sidebar carries the name a site owner just saw on the Plugins
+		// screen, which is the string they are scanning the menu for. The heading
+		// on the screen itself says what the screen is and drops the prefix --
+		// they already know where they are by the time they can read it.
+		$this->assertSame( 'WP-DraftsForFriends', $entries[0][0], 'the sidebar entry is not the plugin name' );
+
+		$html = $this->render_admin_page();
+
+		$this->assertMatchesRegularExpression( '#<h1>Drafts for Friends</h1>#', $html, 'the heading should not carry the WP- prefix' );
+	}
+
+	public function test_the_page_has_two_flat_tabs_in_the_order_section_4_2_1_wants() {
 		$this->assertSame(
-			WP_DraftsForFriends_Admin::capability( 'shares' ),
-			$entries[0][1],
-			'the menu entry does not demand the shared drafts capability'
+			array( 'shares', 'settings' ),
+			array_keys( WP_DraftsForFriends_Admin::tabs() ),
+			'§4.2.1 wants the data screen first and Settings last'
 		);
-		$this->assertFalse(
-			current_user_can( $entries[0][1] ),
-			'a subscriber can satisfy the capability the menu demands'
+
+		$this->assertSame(
+			array( 'Shared Drafts', 'Settings' ),
+			array_values( WP_DraftsForFriends_Admin::tabs() ),
+			'§4.2.1 fixes the tab labels'
 		);
 	}
 
-	public function test_the_settings_submenu_is_hidden_from_an_author() {
+	public function test_an_unknown_tab_falls_back_to_the_first_one() {
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render_admin_page( array( 'tab' => 'nonsense' ) );
+
+		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'an unknown tab should draw the first one' );
+		$this->assertSame( array(), $this->admin_page_notices, 'the screen raised PHP diagnostics' );
+	}
+
+	public function test_the_menu_slug_does_not_embed_the_directory_name() {
 		global $submenu;
 
-		wp_set_current_user( $this->author_id );
+		wp_set_current_user( $this->editor_id );
 
 		$this->register_admin_menu();
 
-		$entries = (array) ( $submenu[ WP_DraftsForFriends_Admin::PAGE ] ?? array() );
+		foreach ( wp_list_pluck( (array) ( $submenu['edit.php'] ?? array() ), 2 ) as $slug ) {
+			$this->assertStringNotContainsString(
+				'wp-draftsforfriends.php',
+				(string) $slug,
+				'the menu slug is still a plugin file name'
+			);
+		}
 
-		$this->assertNotEmpty( $entries, 'an author should still get the shared drafts submenu' );
+		$this->assertSame( WP_DRAFTSFORFRIENDS_SLUG, WP_DraftsForFriends_Admin::PAGE, 'PAGE must be the plugin slug' );
+	}
 
-		$this->assertNotContains(
-			WP_DraftsForFriends_Settings::PAGE,
-			wp_list_pluck( $entries, 2 ),
-			'the settings screen takes manage_options, which an author does not have'
+	public function test_the_page_lives_at_edit_php() {
+		$this->assertStringContainsString(
+			'edit.php?page=' . WP_DraftsForFriends_Admin::PAGE,
+			WP_DraftsForFriends_Admin::page_url(),
+			'the page URL is not the one add_posts_page() produces'
 		);
+
+		$this->assertStringContainsString(
+			'tab=settings',
+			WP_DraftsForFriends_Admin::page_url( 'settings' ),
+			'a tab is not addressable'
+		);
+
+		$this->assertStringNotContainsString(
+			'admin.php',
+			WP_DraftsForFriends_Admin::page_url(),
+			'the page URL still points at the old top-level menu'
+		);
+	}
+
+	public function test_the_menu_requires_the_capability() {
+		global $submenu;
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->register_admin_menu();
+
+		/*
+		 * add_submenu_page() -- which is what add_posts_page() is -- does consult
+		 * the current user, unlike add_menu_page(), and returns false without
+		 * recording anything. So a subscriber genuinely gets no entry, and the
+		 * assertion the old top-level menu could not make is available here.
+		 */
+		$this->assertNotContains(
+			WP_DraftsForFriends_Admin::PAGE,
+			wp_list_pluck( (array) ( $submenu['edit.php'] ?? array() ), 2 ),
+			'a subscriber was given the page in the Posts menu'
+		);
+
+		$this->assertFalse( WP_DraftsForFriends_Admin::get_hook_suffix(), 'the page registered for a subscriber' );
+		$this->assertFalse(
+			current_user_can( WP_DraftsForFriends_Admin::capability( 'shares' ) ),
+			'a subscriber can satisfy the capability the page demands'
+		);
+	}
+
+	public function test_the_page_is_registered_with_the_lower_of_the_two_capabilities() {
+		global $submenu;
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$this->register_admin_menu();
+
+		$entries = array_values(
+			array_filter(
+				(array) ( $submenu['edit.php'] ?? array() ),
+				static function ( $item ) {
+					return isset( $item[2] ) && WP_DraftsForFriends_Admin::PAGE === $item[2];
+				}
+			)
+		);
+
+		$this->assertCount( 1, $entries, 'the page should be registered exactly once' );
+
+		// §4.2.1: the page takes the lower capability so an author reaches it at
+		// all, and the Settings tab then checks its own. Registering the page with
+		// manage_options instead would shut an author out of a screen they are
+		// meant to have.
+		$this->assertSame(
+			WP_DraftsForFriends_Admin::capability( 'shares' ),
+			$entries[0][1],
+			'the page does not demand the shared drafts capability'
+		);
+
+		$this->assertTrue(
+			user_can( $this->author_id, $entries[0][1] ),
+			'an author cannot satisfy the capability the page demands'
+		);
+	}
+
+	public function test_an_author_sees_the_page_and_only_the_first_tab() {
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render_admin_page();
+
+		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'an author should reach the shared drafts tab' );
+		$this->assertStringContainsString( 'nav-tab-wrapper', $html, 'the tab strip is missing' );
+		$this->assertStringContainsString( 'tab=shares', $html, 'the Shared Drafts tab link is missing' );
+		$this->assertSame( 1, preg_match_all( '/class="nav-tab[ "]/', $html ), 'an author should be offered one tab' );
+
+		$this->assertStringNotContainsString(
+			'tab=settings',
+			$html,
+			'an author was shown a link to the Settings tab, which they cannot open'
+		);
+	}
+
+	public function test_an_administrator_sees_both_tabs() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$html = $this->render_admin_page();
+
+		$this->assertStringContainsString( 'tab=shares', $html, 'the Shared Drafts tab link is missing' );
+		$this->assertStringContainsString( 'tab=settings', $html, 'the Settings tab link is missing' );
+		$this->assertSame( 2, preg_match_all( '/class="nav-tab[ "]/', $html ), 'the tab strip should carry exactly two tabs' );
+		$this->assertSame( 1, preg_match_all( '/nav-tab-active/', $html ), 'exactly one tab is active' );
+	}
+
+	public function test_an_author_cannot_open_the_settings_tab() {
+		wp_set_current_user( $this->author_id );
+
+		$this->expectException( WPDieException::class );
+
+		$this->render_admin_page( array( 'tab' => WP_DraftsForFriends_Admin::TAB_SETTINGS ) );
+	}
+
+	public function test_an_author_posting_the_settings_form_is_refused() {
+		wp_set_current_user( $this->author_id );
+
+		WP_DraftsForFriends_Settings::init();
+
+		/*
+		 * What options.php does before it will accept a save: it takes
+		 * manage_options as its default and hands it to
+		 * option_page_capability_{$option_page}, then wp_die()s unless the current
+		 * user has whatever comes back. Asserted here rather than by posting to
+		 * options.php, which ends in a redirect and an exit.
+		 */
+		$required = apply_filters( 'option_page_capability_' . WP_DraftsForFriends_Settings::GROUP, 'manage_options' );
+
+		$this->assertSame(
+			WP_DraftsForFriends_Settings::capability( 'settings' ),
+			$required,
+			'options.php would not enforce the capability the Settings tab renders behind'
+		);
+
+		$this->assertFalse(
+			current_user_can( $required ),
+			'an author can satisfy what options.php requires to save the settings'
+		);
+
+		// And the tab itself refuses to render for them, so neither half of the
+		// round trip is open.
+		$this->expectException( WPDieException::class );
+
+		WP_DraftsForFriends_Settings::render_tab();
 	}
 
 	public function test_the_capability_filter_gates_every_screen() {

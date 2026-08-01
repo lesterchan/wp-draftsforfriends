@@ -14,7 +14,7 @@ Now you don't need to add friends as users to the blog in order to let them prev
 ## Description
 This plugin generates a unique link you can send to a friend so they can read a post before you publish it. The link works for someone who is not logged in and has no account, it only ever opens the one post it was issued for, and it stops working by itself when the time you set runs out.
 
-Everything happens under `Drafts for Friends` in the admin menu: pick an unpublished post, say how long the link should last, and copy the link it gives you. The list below shows every link you have out, how long each has left, and lets you extend or revoke them.
+Everything happens under `Posts -> WP-DraftsForFriends`: pick an unpublished post, say how long the link should last, and copy the link it gives you. The list below shows every link you have out, how long each has left, and lets you extend or revoke them. The settings are the second tab of that same page.
 
 Sharing takes the `publish_posts` capability rather than `manage_options`: a plugin for sharing your own drafts has no business asking for the capability that lets somebody reconfigure the site.
 
@@ -35,7 +35,7 @@ Modified from Drafts for Friends, originally by Neville Longbottom. The plugin i
 I spent most of my free time creating, updating, maintaining and supporting these plugins, if you really love my plugins and could spare me a couple of bucks, I will really appreciate it. If not feel free to use it without any obligations.
 
 ## Usage
-Go to `Drafts for Friends` in the admin menu.
+Go to `Posts -> WP-DraftsForFriends`. The page has two tabs, **Shared Drafts** and **Settings**.
 
 Under **Share a Draft**, choose an unpublished post, set how long the link should last, and press **Share Draft**. The link appears in the list below; press **Copy link** to put it on your clipboard and send it to whoever needs it.
 
@@ -43,12 +43,12 @@ The list shows every link you have out. **Expires After** counts down and then r
 
 To extend links, set **Extend by** to the duration you want to add, tick the rows, choose **Extend selected** and press **Apply**. To revoke them, tick the rows and choose **Revoke selected**. Both are bulk actions rather than links on each row, and deliberately so: a link is a `GET`, and a browser or link checker that quietly prefetches one would have revoked every share on the page before you knew about it.
 
-`Drafts for Friends -> Settings` sets the duration a new share starts on. It is only a starting value — both the share form and **Extend by** can be changed for one share without changing the setting. That screen takes `manage_options`, so an author sees the shared drafts screen but not the settings.
+The **Settings** tab sets the duration a new share starts on. It is only a starting value — both the share form and **Extend by** can be changed for one share without changing the setting. That tab takes `manage_options`, so an author sees the Shared Drafts tab and not the Settings one.
 
 Anyone with the `edit_others_posts` capability — administrators and editors — sees every shared draft on the site and can share any unpublished post. Authors and contributors see only their own, and can only share posts they are allowed to edit.
 
 ### Filters
-`wp_draftsforfriends_capability` decides who may reach each screen. The context is `shares` for the shared drafts screen or `settings` for the settings screen:
+`wp_draftsforfriends_capability` decides who may reach each tab. The context is `shares` for the Shared Drafts tab or `settings` for the Settings tab:
 
 ```php
 add_filter( 'wp_draftsforfriends_capability', function ( $capability, $context ) {
@@ -59,9 +59,9 @@ add_filter( 'wp_draftsforfriends_capability', function ( $capability, $context )
 ## Frequently Asked Questions
 
 ### Where did the Drafts for Friends page go?
-It used to be a submenu of *Posts*. It is now its own top-level `Drafts for Friends` menu, because the plugin has two screens — the shared drafts list and its settings — and a plugin's settings should not live under somebody else's menu.
+It is still under *Posts*, and it is now one page with two tabs — **Shared Drafts** and **Settings** — rather than a screen with no settings of its own.
 
-The address changed too, from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `admin.php?page=wp-draftsforfriends`, so an old bookmark needs replacing. The old address had the plugin's own folder name in it, which meant the page moved if you ever renamed the folder.
+The address changed, from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `edit.php?page=wp-draftsforfriends`, so an old bookmark needs replacing. The old address had the plugin's own folder name in it, which meant the page moved if you ever renamed the folder.
 
 Links you have already given to friends are unaffected. Those point at the post itself and never went through the admin screen.
 
@@ -71,7 +71,7 @@ They are bulk actions now, above and below the list. Tick the rows you want, cho
 A row action is a plain link, and a plain link is one browser prefetch or one link checker away from being followed without anybody meaning to. Revoking cannot be undone, and extending silently prolongs public access to something you have not published, so neither should be reachable that way.
 
 ### A friend says the link shows "Page not found"
-The link has expired, it has been revoked, or the post has been moved to the trash. Open *Drafts for Friends* and look at the **Expires After** column: an expired share reads `Expired`. Tick that row, set **Extend by**, and choose **Extend selected** — the same link starts working again. Restoring the post from the trash also makes its links work again.
+The link has expired, it has been revoked, or the post has been moved to the trash. Open *Posts -> WP-DraftsForFriends* and look at the **Expires After** column: an expired share reads `Expired`. Tick that row, set **Extend by**, and choose **Extend selected** — the same link starts working again. Restoring the post from the trash also makes its links work again.
 
 Once the post is published the link stops previewing and simply shows the published post, which is public by then anyway.
 
@@ -97,14 +97,14 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 
 ### 2.0.0
 * BREAKING: Requires WordPress 6.8 and PHP 8.2, up from 6.0 and 7.4.
-* BREAKING: The screen has moved from `Posts -> Drafts for Friends` at `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to its own top-level `Drafts for Friends` menu at `admin.php?page=wp-draftsforfriends`. Links already sent to friends are not affected.
+* BREAKING: The screen has moved from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `edit.php?page=wp-draftsforfriends`, still under `Posts -> WP-DraftsForFriends`, and is now one page with two tabs, `Shared Drafts` and `Settings`. Links already sent to friends are not affected.
 * BREAKING: Extend and Delete are no longer links on each row. They are bulk actions named Extend selected and Revoke selected, applied to the rows you tick. A row action is a `GET` and one prefetch away from revoking every share on the page.
 * BREAKING: Removed the `WPDraftsForFriends` class. The plugin is now `WP_DraftsForFriends` plus `WP_DraftsForFriends_Admin`, `_Install`, `_List_Table`, `_Options`, `_Preview`, `_Settings` and `_Shares` under `includes/`.
 * BREAKING: Removed the `wp_ajax_draftsforfriends_admin` endpoint. Every write is now an ordinary nonced form post to the screen.
 * BREAKING: Dropped the `dff_page`, `dff_sortby` and `dff_sortorder` query arguments in favour of core's `paged`, `orderby` and `order`. A bookmarked sorted URL no longer sorts.
-* NEW: Added a settings screen at `Drafts for Friends -> Settings` for the default share duration, which was hardcoded to two hours.
+* NEW: Added a `Settings` tab for the default share duration, which was hardcoded to two hours.
 * NEW: Settings are stored in a single `wp_draftsforfriends_options` row and the upgrade markers in `wp_draftsforfriends_version`. Both are removed on uninstall, on a single site and across a network, along with the pre-2.0.0 `draftsforfriends_db_version` row.
-* NEW: Added the `wp_draftsforfriends_capability` filter, so either screen can be handed to another capability.
+* NEW: Added the `wp_draftsforfriends_capability` filter, so either tab can be handed to another capability. It is answered by `option_page_capability_wp_draftsforfriends_options` too, so a filtered settings capability governs the save as well as the screen.
 * NEW: Added a Copy link button to each row.
 * NEW: Added a *Shared drafts per page* screen option.
 * NEW: Added a PHPUnit test suite, vitest coverage for the script, and GitHub Actions CI.
@@ -139,7 +139,7 @@ Requires WordPress 6.8 and PHP 8.2.
 * The post title was written into the admin screen unescaped, so a draft whose title contained markup could put a working script into the screen of anyone able to see that share.
 * Extending and revoking checked permissions against a post id sent with the request rather than the one the share pointed at, so the two could be paired up to act on somebody else's share.
 
-**The screen is its own top-level `Drafts for Friends` menu**, shared drafts first and Settings second, at `admin.php?page=wp-draftsforfriends` rather than `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php`. The old address embedded the plugin's folder name, which is why renaming the folder used to break the page.
+**The screen stays under Posts and is now one page with two tabs**, `Shared Drafts` and `Settings`, at `edit.php?page=wp-draftsforfriends` rather than `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php`. The sidebar entry reads `WP-DraftsForFriends`. The old address embedded the plugin's folder name, which is why renaming the folder used to break the page. The plugin does one thing — share a post with somebody — and its list is a list of shared posts; sharing is gated on `publish_posts`, an editorial capability rather than a site-configuration one, and WordPress keeps post-scoped tools under Posts. A top-level menu would have claimed a sidebar slot next to Posts, Media and Pages for something that only makes sense beside your posts.
 
 **Links already sent keep working.** They point at the post rather than the admin screen, and their form is unchanged: `?p=<id>&draftsforfriends=<hash>`.
 
@@ -147,8 +147,8 @@ Requires WordPress 6.8 and PHP 8.2.
 
 **Trashing a shared post now revokes its links**, and restoring it makes them work again. Deleting a post permanently deletes its shares, which used to be left behind and counted towards the total above the list without ever being listed.
 
-**There is a settings screen**, `Drafts for Friends -> Settings`, which requires `manage_options` and sets the duration a new share starts on. Sharing itself still requires `publish_posts`.
+**There are settings**, on the `Settings` tab, which requires `manage_options` and sets the duration a new share starts on. Sharing itself still requires `publish_posts`, and that is what the page as a whole requires — so an author reaches the page and sees only the `Shared Drafts` tab. The Settings tab is checked separately, both to open it and to save it.
 
 **Smaller changes.** The list shows twenty rows rather than fifty, changeable under *Screen Options*. The sort links no longer use `dff_sortby` and `dff_sortorder`, so a bookmarked sorted URL opens unsorted. The plugin stores `wp_draftsforfriends_options` and `wp_draftsforfriends_version`; deleting it from the Plugins screen removes both, removes the older `draftsforfriends_db_version` row, and drops the plugin's table.
 
-**For code written against the plugin.** `WPDraftsForFriends` no longer exists — it is `WP_DraftsForFriends` plus seven `WP_DraftsForFriends_*` classes under `includes/`. The `wp_ajax_draftsforfriends_admin` endpoint is removed, because every write is now an ordinary form post. There is one new filter, `wp_draftsforfriends_capability`, deciding who may reach each screen. No hook was renamed, because the plugin previously fired none of its own.
+**For code written against the plugin.** `WPDraftsForFriends` no longer exists — it is `WP_DraftsForFriends` plus seven `WP_DraftsForFriends_*` classes under `includes/`. The `wp_ajax_draftsforfriends_admin` endpoint is removed, because every write is now an ordinary form post. There is one new filter, `wp_draftsforfriends_capability`, deciding who may reach each tab; it also answers `option_page_capability_wp_draftsforfriends_options`, so a filtered settings capability governs the save and not only the screen. No hook was renamed, because the plugin previously fired none of its own.

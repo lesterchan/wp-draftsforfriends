@@ -66,8 +66,12 @@ export function screenMarkup( rows = [] ) {
 	return `
 		<div class="wrap">
 			<h1>Drafts for Friends</h1>
+			<nav class="nav-tab-wrapper">
+				<a href="/wp-admin/edit.php?page=wp-draftsforfriends&tab=shares" class="nav-tab nav-tab-active">Shared Drafts</a>
+				<a href="/wp-admin/edit.php?page=wp-draftsforfriends&tab=settings" class="nav-tab">Settings</a>
+			</nav>
 			<h2>Share a Draft</h2>
-			<form id="draftsforfriends-add" method="post" action="/wp-admin/admin.php?page=wp-draftsforfriends">
+			<form id="draftsforfriends-add" method="post" action="/wp-admin/edit.php?page=wp-draftsforfriends&tab=shares">
 				<p>
 					<label for="draftsforfriends-post-id">Choose a draft:</label>
 					<select name="post_id" id="draftsforfriends-post-id">
@@ -85,7 +89,7 @@ export function screenMarkup( rows = [] ) {
 				<input type="submit" name="draftsforfriends_add" id="draftsforfriends-submit" value="Share Draft" />
 			</form>
 			<h2>Currently Shared Drafts</h2>
-			<form id="draftsforfriends-list" method="post" action="/wp-admin/admin.php?page=wp-draftsforfriends">
+			<form id="draftsforfriends-list" method="post" action="/wp-admin/edit.php?page=wp-draftsforfriends&tab=shares">
 				<div class="tablenav top">
 					<select name="action" id="bulk-action-selector-top">
 						<option value="-1">Bulk actions</option>

@@ -28,14 +28,42 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 		);
 	}
 
-	public function test_the_settings_page_has_its_own_slug() {
+	public function test_the_settings_page_identifier_is_not_a_menu_slug() {
+		global $submenu;
+
 		$this->assertSame( 'wp-draftsforfriends-settings', WP_DraftsForFriends_Settings::PAGE );
 		$this->assertNotSame( WP_DraftsForFriends_Admin::PAGE, WP_DraftsForFriends_Settings::PAGE );
+
+		// It is what do_settings_sections() is keyed on and nothing else. A menu
+		// entry using it would be the second screen §4.2.1 replaced with a tab.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$this->register_admin_menu();
+
+		foreach ( (array) $submenu as $entries ) {
+			$this->assertNotContains(
+				WP_DraftsForFriends_Settings::PAGE,
+				wp_list_pluck( (array) $entries, 2 ),
+				'the settings page identifier is registered as a menu entry'
+			);
+		}
 	}
 
-	public function test_the_settings_screen_takes_manage_options() {
+	public function test_the_settings_tab_takes_manage_options() {
 		$this->assertSame( 'manage_options', WP_DraftsForFriends_Settings::CAPABILITY, '§2.7 keeps settings on manage_options' );
 		$this->assertSame( 'publish_posts', WP_DraftsForFriends_Admin::CAPABILITY, 'the data screen keeps the plugin custom capability' );
+
+		$this->assertSame(
+			WP_DraftsForFriends_Settings::capability( 'settings' ),
+			WP_DraftsForFriends_Admin::tab_capability( WP_DraftsForFriends_Admin::TAB_SETTINGS ),
+			'the Settings tab does not check the settings capability'
+		);
+
+		$this->assertSame(
+			WP_DraftsForFriends_Admin::capability( 'shares' ),
+			WP_DraftsForFriends_Admin::tab_capability( WP_DraftsForFriends_Admin::TAB_SHARES ),
+			'the Shared Drafts tab does not check the shares capability'
+		);
 	}
 
 	public function test_registration_registers_the_setting_the_section_and_the_field() {
@@ -76,7 +104,8 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_settings_page();
 
-		$this->assertStringContainsString( 'Drafts for Friends Settings', $html );
+		$this->assertStringContainsString( 'Drafts for Friends', $html );
+		$this->assertStringContainsString( 'nav-tab-active', $html, 'the Settings tab is not marked active' );
 		$this->assertStringContainsString( 'name="wp_draftsforfriends_options[expires]"', $html, 'the field does not post into the settings row' );
 		$this->assertStringContainsString( 'value="6"', $html, 'the stored duration is not shown' );
 		$this->assertStringContainsString( 'name="wp_draftsforfriends_options[measure]"', $html );
@@ -88,7 +117,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_settings_page();
 
-		$this->assertStringContainsString( 'action="options.php"', $html, 'the form must post to options.php' );
+		$this->assertMatchesRegularExpression( '#action="[^"]*options\.php"#', $html, 'the form must post to options.php' );
 		// settings_fields() emits single-quoted attributes, so the pairing worth
 		// matching is the field name and the group value, not a double-quoted
 		// spelling core never produces.
@@ -115,12 +144,127 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertStringContainsString( '<label class="screen-reader-text" for="wp_draftsforfriends_measure">', $html, 'the unit dropdown is unlabelled' );
 	}
 
+	public function test_the_tab_carries_the_active_tab_through_the_save() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$html = $this->render_settings_page();
+
+		// options.php sends the browser to _wp_http_referer, and settings_fields()
+		// emits one pointing at wherever the request came from. The tab's own
+		// field has to come after it -- PHP keeps the last of a repeated name --
+		// or a save lands on the first tab with the "Settings saved." message on
+		// a screen the user was not looking at.
+		preg_match_all( '/name="_wp_http_referer"\s+value="([^"]*)"/', $html, $matches );
+
+		$this->assertNotEmpty( $matches[1], 'the settings form carries no referer field' );
+		$this->assertStringContainsString(
+			'tab=settings',
+			end( $matches[1] ),
+			'the save does not come back to the Settings tab'
+		);
+	}
+
 	public function test_the_screen_refuses_a_user_without_manage_options() {
 		wp_set_current_user( $this->author_id );
 
 		$this->expectException( WPDieException::class );
 
 		$this->render_settings_page();
+	}
+
+	public function test_options_php_enforces_the_same_capability_the_tab_renders_behind() {
+		WP_DraftsForFriends_Settings::init();
+
+		add_filter(
+			'wp_draftsforfriends_capability',
+			static function ( $capability, $context ) {
+				return 'settings' === $context ? 'edit_theme_options' : $capability;
+			},
+			10,
+			2
+		);
+
+		// Core's own default for a registered group is manage_options. A plugin
+		// that offers a capability filter and does not answer this one hands out a
+		// screen that renders and will not save.
+		$this->assertSame(
+			'edit_theme_options',
+			apply_filters( 'option_page_capability_' . WP_DraftsForFriends_Settings::GROUP, 'manage_options' ),
+			'options.php would enforce a capability the plugin no longer uses'
+		);
+	}
+
+	public function test_only_one_tab_owns_settings_so_a_save_cannot_wipe_another() {
+		global $wp_settings_sections, $wp_settings_fields;
+
+		WP_DraftsForFriends_Settings::register_settings();
+
+		/*
+		 * §4.2.1's data-destroying trap: register_setting()'s sanitize_callback is
+		 * handed only the fields the submitting form posted, so with two
+		 * settings-bearing tabs a naive sanitiser wipes whatever the other tab
+		 * owns. This plugin is safe from it by construction rather than by
+		 * merging -- the Shared Drafts tab is a list table that posts to itself
+		 * and owns no key in the row -- and this is the assertion that keeps that
+		 * true. When it fails, WP_DraftsForFriends_Options::sanitize() has to
+		 * start merging the submitted subset over the stored value.
+		 */
+		$pages = array_unique(
+			array_merge(
+				array_keys( (array) $wp_settings_sections ),
+				array_keys( (array) $wp_settings_fields )
+			)
+		);
+
+		$ours = array_values(
+			array_filter(
+				$pages,
+				static function ( $page ) {
+					return 0 === strpos( (string) $page, WP_DraftsForFriends_Admin::PAGE );
+				}
+			)
+		);
+
+		$this->assertSame(
+			array( WP_DraftsForFriends_Settings::PAGE ),
+			$ours,
+			'a second tab has gained settings fields; the sanitiser must now merge over the stored row'
+		);
+	}
+
+	public function test_saving_the_settings_tab_leaves_the_shared_drafts_tab_untouched() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		$share = $this->make_share( $this->author_id, $this->draft_id );
+
+		wp_set_current_user( $user_id );
+		update_user_meta( $user_id, 'wp_draftsforfriends_per_page', 5 );
+
+		WP_DraftsForFriends_Settings::register_settings();
+
+		// The whole settings form, as the browser posts it.
+		WP_DraftsForFriends_Options::update(
+			WP_DraftsForFriends_Options::sanitize(
+				array(
+					'expires' => '9',
+					'measure' => 'd',
+				)
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'expires' => 9,
+				'measure' => 'd',
+			),
+			get_option( WP_DraftsForFriends_Options::OPTION ),
+			'the save did not store both halves of the one setting'
+		);
+
+		// Everything the other tab owns lives outside this row and must survive it.
+		$this->assertSame( 1, $this->total_shares(), 'saving the settings destroyed a share' );
+		$this->assertNotEmpty( WP_DraftsForFriends_Shares::get( $share->id ), 'the shared draft is gone' );
+		$this->assertSame( '5', (string) get_user_meta( $user_id, 'wp_draftsforfriends_per_page', true ), 'the per-page screen option was reset' );
 	}
 
 	public function test_the_capability_filter_is_consulted_with_the_settings_context() {
@@ -148,7 +292,8 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 		$links = WP_DraftsForFriends_Settings::action_links( array( '<a href="#">Deactivate</a>' ) );
 
 		$this->assertCount( 2, $links );
-		$this->assertStringContainsString( 'page=' . WP_DraftsForFriends_Settings::PAGE, $links[0] );
+		$this->assertStringContainsString( 'edit.php?page=' . WP_DraftsForFriends_Admin::PAGE, $links[0], 'the link does not point at the plugin page under Posts' );
+		$this->assertStringContainsString( 'tab=settings', $links[0], 'the link does not open the Settings tab' );
 	}
 
 	public function test_the_plugins_screen_gains_nothing_for_an_author() {

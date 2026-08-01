@@ -10,11 +10,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Registers the menu, renders the shared drafts screen and handles its writes.
+ * Registers the menu, renders the plugin's one page and handles its writes.
  *
  * §4.2 splits this from WP_DraftsForFriends_Settings: this class owns the menu
  * and the screens, and that one owns register_setting(), the sections, the fields
  * and the sanitiser.
+ *
+ * The plugin has one admin page under Posts, with two flat tabs: Shared Drafts
+ * and Settings. It does one thing -- share a post with somebody -- and its list
+ * is a list of shared posts, so it belongs where WordPress keeps post-scoped
+ * tools. See admin_menu() for why that is not a top-level menu, and render_page()
+ * for the capability arrangement the tabs need.
  *
  * Every path here works with JavaScript turned off. The add form and both bulk
  * actions are real nonced form posts, and the script only adds confirmation,
@@ -41,18 +47,36 @@ class WP_DraftsForFriends_Admin {
 	const PAGE = 'wp-draftsforfriends';
 
 	/**
-	 * Capability required to reach the shared drafts screen.
+	 * Capability required to reach the page and its Shared Drafts tab.
 	 *
 	 * Deliberately publish_posts rather than the manage_options a settings-only
-	 * plugin would take: everything this screen does is scoped to drafts the
+	 * plugin would take: everything this tab does is scoped to drafts the
 	 * user may already edit, and a plugin for sharing your own drafts has no
 	 * business demanding the capability that lets somebody reconfigure the site.
 	 * §2.7 keeps a plugin's existing custom capability for its data screens, and
 	 * settings stay on manage_options -- see WP_DraftsForFriends_Settings.
 	 *
+	 * This is also the capability the *page* is registered with, because §4.2.1
+	 * requires the lower of the two once the screens become tabs. The Settings
+	 * tab then checks manage_options for itself; see render_page().
+	 *
 	 * @var string
 	 */
 	const CAPABILITY = 'publish_posts';
+
+	/**
+	 * The default tab, and the one an unknown ?tab= falls back to.
+	 *
+	 * @var string
+	 */
+	const TAB_SHARES = 'shares';
+
+	/**
+	 * The settings tab.
+	 *
+	 * @var string
+	 */
+	const TAB_SETTINGS = 'settings';
 
 	/**
 	 * Nonce action for the add form.
@@ -82,11 +106,12 @@ class WP_DraftsForFriends_Admin {
 	 * The hook suffix WordPress handed back when the menu was registered.
 	 *
 	 * Recorded rather than assumed. get_plugin_page_hookname() derives the prefix
-	 * from $admin_page_hooks, so the suffix is 'toplevel_page_wp-draftsforfriends'
+	 * from $admin_page_hooks, so the suffix is 'posts_page_wp-draftsforfriends'
 	 * on a real admin request and something else anywhere the admin menu has not
 	 * been built. Comparing against a hardcoded string means the script silently
 	 * fails to load in the cases that do not match, and the screen renders with
-	 * dead buttons.
+	 * dead buttons -- and the string moved once already, when the page left its
+	 * own top-level menu and its suffix stopped being 'toplevel_page_…'.
 	 *
 	 * @var string
 	 */
@@ -140,49 +165,85 @@ class WP_DraftsForFriends_Admin {
 	/**
 	 * Register the menu.
 	 *
-	 * One top-level menu, the data screen first and Settings last, per §4.1: a
-	 * plugin with a list table and an add form has screens a site owner manages
-	 * things on. Until 2.0.0 this was a submenu of Posts, which is also where the
-	 * settings would have had to go, and §4.1 has no room for a plugin whose
-	 * settings live under somebody else's menu.
+	 * One page under Posts, carrying both tabs. The plugin does one thing --
+	 * share a post with somebody -- and its list is a list of shared posts.
+	 * Sharing is gated on publish_posts, which is an editorial capability rather
+	 * than a site-configuration one, and WordPress keeps post-scoped tools under
+	 * Posts. A top-level menu for it would claim a sidebar slot next to Posts,
+	 * Media and Pages for something that only makes sense beside your posts.
 	 *
-	 * The Settings entry takes manage_options, so an author sees the menu and the
-	 * shared drafts screen but not the settings -- which is the intended result
-	 * of the two capabilities in §2.7 rather than an accident of registration.
+	 * The page is registered with the *lower* of the two capabilities, per
+	 * §4.2.1, so an author reaches it at all; render_page() then checks
+	 * manage_options before it will draw or hand over the Settings tab. Getting
+	 * that second half wrong is privilege escalation dressed as a layout change,
+	 * which is why it is asserted from both directions in tests/test-admin.php.
+	 *
+	 * The sidebar label is the plugin's name, spelled as the plugin header
+	 * spells it, per §4.1: it is the string a site owner has just seen on the
+	 * Plugins screen and is now looking for. That holds for the plugin's one
+	 * entry wherever it hangs -- wp-print's entry under Settings reads WP-Print
+	 * for the same reason. The rule's exception is for a plugin's *own*
+	 * submenus, which say what each screen is; this plugin has none, because it
+	 * has one page. The page title and the h1 do drop the prefix.
 	 *
 	 * @return void
 	 */
 	public static function admin_menu() {
-		self::$hook_suffix = add_menu_page(
+		self::$hook_suffix = add_posts_page(
 			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
 			__( 'WP-DraftsForFriends', 'wp-draftsforfriends' ),
-			self::capability( 'shares' ),
-			self::PAGE,
-			array( __CLASS__, 'render_page' ),
-			'dashicons-share'
-		);
-
-		add_submenu_page(
-			self::PAGE,
-			__( 'Shared Drafts', 'wp-draftsforfriends' ),
-			__( 'Shared Drafts', 'wp-draftsforfriends' ),
 			self::capability( 'shares' ),
 			self::PAGE,
 			array( __CLASS__, 'render_page' )
 		);
 
-		add_submenu_page(
-			self::PAGE,
-			__( 'Drafts for Friends Settings', 'wp-draftsforfriends' ),
-			__( 'Settings', 'wp-draftsforfriends' ),
-			WP_DraftsForFriends_Settings::capability( 'settings' ),
-			WP_DraftsForFriends_Settings::PAGE,
-			array( 'WP_DraftsForFriends_Settings', 'render_page' )
-		);
-
 		if ( self::$hook_suffix ) {
 			add_action( 'load-' . self::$hook_suffix, array( __CLASS__, 'add_screen_options' ) );
 		}
+	}
+
+	/**
+	 * The tabs on the page, in order.
+	 *
+	 * Flat, and exactly two, per §4.2.1: the data screen first and Settings last.
+	 *
+	 * @return array Tab slug to label.
+	 */
+	public static function tabs() {
+		return array(
+			self::TAB_SHARES   => __( 'Shared Drafts', 'wp-draftsforfriends' ),
+			self::TAB_SETTINGS => __( 'Settings', 'wp-draftsforfriends' ),
+		);
+	}
+
+	/**
+	 * The capability a given tab requires.
+	 *
+	 * The page takes the lower of the two, so this is what stops the Settings tab
+	 * being reachable by everybody the page is.
+	 *
+	 * @param string $tab Tab slug.
+	 * @return string The required capability.
+	 */
+	public static function tab_capability( $tab ) {
+		return self::TAB_SETTINGS === $tab
+			? WP_DraftsForFriends_Settings::capability( 'settings' )
+			: self::capability( 'shares' );
+	}
+
+	/**
+	 * Which tab the request asked for.
+	 *
+	 * An unknown tab is the first one rather than a 404: ?tab= is a rendering
+	 * choice, and the page it names still exists.
+	 *
+	 * @return string Tab slug.
+	 */
+	public static function current_tab() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Choosing which tab to draw; nothing is read from the request beyond that and nothing is written.
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : self::TAB_SHARES;
+
+		return array_key_exists( $tab, self::tabs() ) ? $tab : self::TAB_SHARES;
 	}
 
 	/**
@@ -195,12 +256,23 @@ class WP_DraftsForFriends_Admin {
 	}
 
 	/**
-	 * The screen's own URL.
+	 * The page's own URL, optionally on a given tab.
 	 *
+	 * Built on edit.php rather than admin.php, because the page hangs off Posts.
+	 * Every form on the page posts back to this, which is what keeps the active
+	 * tab across a bulk action without a hidden field to carry it.
+	 *
+	 * @param string $tab Optional tab slug to land on.
 	 * @return string
 	 */
-	public static function page_url() {
-		return add_query_arg( 'page', self::PAGE, admin_url( 'admin.php' ) );
+	public static function page_url( $tab = '' ) {
+		$args = array( 'page' => self::PAGE );
+
+		if ( '' !== $tab ) {
+			$args['tab'] = $tab;
+		}
+
+		return add_query_arg( $args, admin_url( 'edit.php' ) );
 	}
 
 	/**
@@ -209,9 +281,17 @@ class WP_DraftsForFriends_Admin {
 	 * Core persists any option whose name ends in _page by itself, so there is
 	 * no set-screen-option filter to add.
 	 *
+	 * Only on the tab that has a list to page through: Screen Options offering
+	 * "Shared drafts per page" above a settings form is an option about a table
+	 * that is not on screen.
+	 *
 	 * @return void
 	 */
 	public static function add_screen_options() {
+		if ( self::TAB_SHARES !== self::current_tab() ) {
+			return;
+		}
+
 		add_screen_option(
 			'per_page',
 			array(
@@ -270,7 +350,14 @@ class WP_DraftsForFriends_Admin {
 	}
 
 	/**
-	 * Render the shared drafts screen.
+	 * Render the page, on whichever tab was asked for.
+	 *
+	 * Two capability checks, and both are load-bearing. The page is registered
+	 * with publish_posts because that is the lower of the two, so reaching this
+	 * method proves only that the caller may share drafts. The Settings tab is
+	 * gated here as well, before anything is drawn, and again inside
+	 * WP_DraftsForFriends_Settings::render_tab() -- and the *save* is gated
+	 * separately, because that goes to options.php rather than through here.
 	 *
 	 * @return void
 	 */
@@ -279,30 +366,92 @@ class WP_DraftsForFriends_Admin {
 			wp_die( esc_html__( 'You do not have permission to manage shared drafts.', 'wp-draftsforfriends' ) );
 		}
 
-		// Before the table is built, so the list reflects what the request just
-		// did rather than the state it was in when the form was submitted.
-		self::handle_request();
+		$tab = self::current_tab();
 
-		$table = new WP_DraftsForFriends_List_Table();
-		$table->prepare_items();
+		if ( ! current_user_can( self::tab_capability( $tab ) ) ) {
+			wp_die( esc_html__( 'You do not have permission to change these settings.', 'wp-draftsforfriends' ) );
+		}
+
+		if ( self::TAB_SHARES === $tab ) {
+			/*
+			 * Before a byte of the page is drawn. The writes raise their notices
+			 * through add_settings_error(), so anything running after
+			 * settings_errors() below reports itself to a screen that has already
+			 * printed its messages -- which is a share that is created, or twenty
+			 * that are revoked, and a page that says nothing happened.
+			 */
+			self::handle_request();
+		}
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Drafts for Friends', 'wp-draftsforfriends' ); ?></h1>
 
-			<?php settings_errors( self::NOTICES ); ?>
+			<?php
+			if ( self::TAB_SETTINGS === $tab ) {
+				/*
+				 * Unscoped, so "Settings saved." actually appears. options.php
+				 * registers that message against the 'general' slug rather than
+				 * against this screen, and core will not print it for us: it calls
+				 * settings_errors() from options-head.php, which admin-header.php
+				 * includes only when the parent file is options-general.php. This
+				 * page hangs off edit.php, so without this line pressing Save
+				 * Changes sends the browser back here and says nothing at all.
+				 */
+				settings_errors();
+			} else {
+				settings_errors( self::NOTICES );
+			}
+			?>
 
-			<?php self::render_add_form(); ?>
+			<nav class="nav-tab-wrapper">
+				<?php foreach ( self::tabs() as $slug => $label ) : ?>
+					<?php if ( ! current_user_can( self::tab_capability( $slug ) ) ) : ?>
+						<?php continue; ?>
+					<?php endif; ?>
+					<a href="<?php echo esc_url( self::page_url( $slug ) ); ?>" class="nav-tab<?php echo $slug === $tab ? ' nav-tab-active' : ''; ?>">
+						<?php echo esc_html( $label ); ?>
+					</a>
+				<?php endforeach; ?>
+			</nav>
 
-			<h2><?php esc_html_e( 'Currently Shared Drafts', 'wp-draftsforfriends' ); ?></h2>
-
-			<form id="draftsforfriends-list" method="post" action="<?php echo esc_url( self::page_url() ); ?>">
-				<?php
-				// No wp_nonce_field() here: $table->display() emits the bulk nonce this
-				// form is checked against, and a second _wpnonce input would override it.
-				$table->display();
-				?>
-			</form>
+			<?php
+			if ( self::TAB_SETTINGS === $tab ) {
+				WP_DraftsForFriends_Settings::render_tab();
+			} else {
+				self::render_shares_tab();
+			}
+			?>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Render the Shared Drafts tab: the add form and the list table.
+	 *
+	 * Neither form here goes anywhere near options.php. This tab is a list table
+	 * with bulk actions, and §4.2.1 is explicit that a data screen turned into a
+	 * tab must keep its own form and its own nonce.
+	 *
+	 * @return void
+	 */
+	private static function render_shares_tab() {
+		// The table is built here rather than in render_page() only because it is
+		// the last thing on the tab; handle_request() has already run, so the list
+		// reflects what the request just did.
+		$table = new WP_DraftsForFriends_List_Table();
+		$table->prepare_items();
+
+		self::render_add_form();
+		?>
+		<h2><?php esc_html_e( 'Currently Shared Drafts', 'wp-draftsforfriends' ); ?></h2>
+
+		<form id="draftsforfriends-list" method="post" action="<?php echo esc_url( self::page_url( self::TAB_SHARES ) ); ?>">
+			<?php
+			// No wp_nonce_field() here: $table->display() emits the bulk nonce this
+			// form is checked against, and a second _wpnonce input would override it.
+			$table->display();
+			?>
+		</form>
 		<?php
 	}
 
@@ -362,7 +511,7 @@ class WP_DraftsForFriends_Admin {
 		?>
 		<h2><?php esc_html_e( 'Share a Draft', 'wp-draftsforfriends' ); ?></h2>
 
-		<form id="draftsforfriends-add" method="post" action="<?php echo esc_url( self::page_url() ); ?>">
+		<form id="draftsforfriends-add" method="post" action="<?php echo esc_url( self::page_url( self::TAB_SHARES ) ); ?>">
 			<?php wp_nonce_field( self::NONCE_ADD ); ?>
 			<p>
 				<label for="draftsforfriends-post-id"><?php esc_html_e( 'Choose a draft:', 'wp-draftsforfriends' ); ?></label>

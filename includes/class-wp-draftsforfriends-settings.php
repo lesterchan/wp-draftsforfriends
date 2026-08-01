@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Builds Drafts for Friends -> Settings with the WordPress Settings API.
+ * Builds the Settings tab of the Drafts for Friends page with the Settings API.
  *
  * §4.2 splits the two responsibilities that used to sit on one class:
  * WP_DraftsForFriends_Admin owns the menu and the screens, and this class owns
@@ -20,8 +20,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * borrowed the Settings API purely as a renderer, which put settings
  * plumbing on a screen that saved no settings.
  *
- * The settings screen takes manage_options while the shared drafts screen takes
- * publish_posts. Both go through the same wp_draftsforfriends_capability filter.
+ * The Settings tab takes manage_options while the Shared Drafts tab takes
+ * publish_posts. Both go through the same wp_draftsforfriends_capability filter,
+ * and because the two now share one page there are three gates rather than one:
+ * the page takes the lower capability, the tab checks manage_options before it
+ * renders, and the option page capability filter below makes options.php refuse
+ * the save. Skipping the third would leave an author unable to see the form and
+ * perfectly able to post it.
+ *
+ * §4.2.1 wants one register_setting() and one option row across the tabs, which
+ * is what is here: the Shared Drafts tab owns no setting at all. That is also
+ * why the sanitiser does not merge over the stored row -- see the note on
+ * WP_DraftsForFriends_Options::sanitize().
  *
  * @since 2.0.0
  */
@@ -38,10 +48,13 @@ class WP_DraftsForFriends_Settings {
 	const GROUP = 'wp_draftsforfriends_options';
 
 	/**
-	 * The settings page slug.
+	 * The Settings API page the sections and fields are registered against.
 	 *
-	 * Its own slug rather than the data screen's, because the two are separate
-	 * submenu entries under one top-level menu.
+	 * Not a menu slug: there is one menu page, WP_DraftsForFriends_Admin::PAGE,
+	 * and the settings are a tab of it. This string never appears in a URL. It
+	 * exists because add_settings_section(), add_settings_field() and
+	 * do_settings_sections() key off a page identifier, and giving the tab its
+	 * own is what stops one tab drawing the other's fields.
 	 *
 	 * @var string
 	 */
@@ -50,8 +63,8 @@ class WP_DraftsForFriends_Settings {
 	/**
 	 * The capability required to see and save the settings.
 	 *
-	 * Deliberately manage_options rather than the publish_posts the shared drafts
-	 * screen takes: §2.7 keeps a plugin's custom capability for its data screens
+	 * Deliberately manage_options rather than the publish_posts the Shared Drafts
+	 * tab takes: §2.7 keeps a plugin's custom capability for its data screens
 	 * and leaves settings where every other plugin's settings are. An author may
 	 * share their own drafts; deciding how long everybody's shares last is a site
 	 * setting.
@@ -75,6 +88,25 @@ class WP_DraftsForFriends_Settings {
 	public static function init() {
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( WP_DRAFTSFORFRIENDS_MAIN_FILE ), array( __CLASS__, 'action_links' ) );
+
+		/*
+		 * What options.php enforces before it will accept the save. Its default
+		 * for any registered group is manage_options, which happens to be the
+		 * right answer here -- but only by coincidence, and a site that moved the
+		 * settings elsewhere with wp_draftsforfriends_capability would have found
+		 * the screen it was given refusing to save. Answering with the same
+		 * filtered capability the tab renders behind is what makes the two agree.
+		 */
+		add_filter( 'option_page_capability_' . self::GROUP, array( __CLASS__, 'option_page_capability' ) );
+	}
+
+	/**
+	 * The capability options.php requires to accept this settings group.
+	 *
+	 * @return string
+	 */
+	public static function option_page_capability() {
+		return self::capability( 'settings' );
 	}
 
 	/**
@@ -177,27 +209,41 @@ class WP_DraftsForFriends_Settings {
 	}
 
 	/**
-	 * Render the settings screen.
+	 * Render the Settings tab.
+	 *
+	 * The wrap, the h1 and the tab strip belong to the page, so this draws only
+	 * the form. The capability is checked again even though render_page() has
+	 * already refused anyone without it: this method is public, and a gate that
+	 * only holds when you arrive by the expected route is not a gate.
 	 *
 	 * @return void
 	 */
-	public static function render_page() {
+	public static function render_tab() {
 		if ( ! current_user_can( self::capability( 'settings' ) ) ) {
 			wp_die( esc_html__( 'You do not have permission to change these settings.', 'wp-draftsforfriends' ) );
 		}
 
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Drafts for Friends Settings', 'wp-draftsforfriends' ); ?></h1>
+		<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
+			<?php
+			settings_fields( self::GROUP );
 
-			<form method="post" action="options.php">
-				<?php
-				settings_fields( self::GROUP );
-				do_settings_sections( self::PAGE );
-				submit_button();
-				?>
-			</form>
-		</div>
+			/*
+			 * Where options.php sends the browser afterwards. settings_fields()
+			 * emits a _wp_http_referer of its own through wp_nonce_field(), and
+			 * PHP keeps the last field of a repeated name, so this one wins --
+			 * which is the point: without it the save lands back on the first tab
+			 * and the message about it appears somewhere the user was not.
+			 */
+			printf(
+				'<input type="hidden" name="_wp_http_referer" value="%s" />',
+				esc_url( WP_DraftsForFriends_Admin::page_url( WP_DraftsForFriends_Admin::TAB_SETTINGS ) )
+			);
+
+			do_settings_sections( self::PAGE );
+			submit_button();
+			?>
+		</form>
 		<?php
 	}
 
@@ -216,7 +262,7 @@ class WP_DraftsForFriends_Settings {
 			$links,
 			sprintf(
 				'<a href="%1$s">%2$s</a>',
-				esc_url( admin_url( 'admin.php?page=' . self::PAGE ) ),
+				esc_url( WP_DraftsForFriends_Admin::page_url( WP_DraftsForFriends_Admin::TAB_SETTINGS ) ),
 				esc_html__( 'Settings', 'wp-draftsforfriends' )
 			)
 		);

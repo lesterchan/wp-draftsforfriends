@@ -110,8 +110,10 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 	 *
 	 * Always ask rather than hardcode: get_plugin_page_hookname() builds the
 	 * prefix from $admin_page_hooks, so the same menu slug yields
-	 * 'toplevel_page_wp-draftsforfriends' on a real admin request and something
-	 * else where the admin menu has not been built, as in this test run.
+	 * 'posts_page_wp-draftsforfriends' on a real admin request and something
+	 * else where the admin menu has not been built, as in this test run. It was
+	 * 'toplevel_page_…' until the page moved under Posts, which is the second
+	 * time this string has changed under a suite that never asserts it.
 	 *
 	 * @return string The hook suffix.
 	 */
@@ -151,12 +153,16 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 		 * the time a page callback runs, and WP_List_Table reaches for both through
 		 * WP_Screen. Set here rather than in the plugin: standing in for admin.php
 		 * is the fixture's job.
+		 *
+		 * The screen comes from the recorded hook suffix rather than from a string
+		 * built here, for the same reason the plugin records it: the page moved
+		 * under Posts and every hand-built 'toplevel_page_…' went stale silently.
 		 */
 		$this->register_admin_menu();
 
 		$GLOBALS['hook_suffix'] = $this->admin_hook_suffix;
 
-		set_current_screen( 'toplevel_page_' . WP_DraftsForFriends_Admin::PAGE );
+		set_current_screen( $this->admin_hook_suffix );
 
 		$level = ob_get_level();
 
@@ -193,25 +199,19 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Render the settings screen.
+	 * Render the Settings tab of the plugin's page.
+	 *
+	 * Through the page rather than by calling the tab directly, because the tab
+	 * is not a screen of its own any more: what a browser reaches is
+	 * edit.php?page=wp-draftsforfriends&tab=settings, and both capability checks
+	 * that URL passes through are part of what these tests are asserting.
 	 *
 	 * @return string The rendered markup.
 	 */
 	protected function render_settings_page() {
 		WP_DraftsForFriends_Settings::register_settings();
 
-		$level = ob_get_level();
-
-		try {
-			ob_start();
-			WP_DraftsForFriends_Settings::render_page();
-
-			return (string) ob_get_clean();
-		} finally {
-			while ( ob_get_level() > $level ) {
-				ob_end_clean();
-			}
-		}
+		return $this->render_admin_page( array( 'tab' => WP_DraftsForFriends_Admin::TAB_SETTINGS ) );
 	}
 
 	/**
@@ -233,7 +233,7 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 					// wp_nonce_field() emits this alongside the nonce, so a real
 					// submission always carries it and check_admin_referer() has a
 					// referer to read rather than a false to coerce.
-					'_wp_http_referer'     => '/wp-admin/admin.php?page=' . WP_DraftsForFriends_Admin::PAGE,
+					'_wp_http_referer'     => '/wp-admin/edit.php?page=' . WP_DraftsForFriends_Admin::PAGE,
 				),
 				$fields
 			)
@@ -258,7 +258,7 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 					// The nonce core's list table emits, not one of the screen's own: a
 					// second _wpnonce beside it would replace rather than add to it.
 					'_wpnonce'         => wp_create_nonce( ( new WP_DraftsForFriends_List_Table() )->bulk_nonce_action() ),
-					'_wp_http_referer' => '/wp-admin/admin.php?page=' . WP_DraftsForFriends_Admin::PAGE,
+					'_wp_http_referer' => '/wp-admin/edit.php?page=' . WP_DraftsForFriends_Admin::PAGE,
 				),
 				$fields
 			)
