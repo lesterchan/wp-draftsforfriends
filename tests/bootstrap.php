@@ -82,3 +82,12 @@ WP_DraftsForFriends_Install::maybe_upgrade();
  * the shared test case has to be required explicitly.
  */
 require_once __DIR__ . '/helper-testcase.php';
+
+/*
+ * The shared metadata contract, a byte-identical copy of
+ * _standards/templates/helper-metadata-testcase.php. It extends Plugin_TestCase
+ * because the nineteen copies have to be identical; the alias is the one line
+ * per plugin the mechanism needs.
+ */
+class_alias( 'WP_DraftsForFriends_TestCase', 'Plugin_TestCase' );
+require_once __DIR__ . '/helper-metadata-testcase.php';

@@ -1,365 +1,166 @@
 <?php
 /**
- * The checks every plugin in the collection carries.
+ * What is true of WP-DraftsForFriends and of no other plugin.
+ *
+ * The twenty-three assertions §7.2 asks of all nineteen live in
+ * Plugin_Metadata_TestCase, a byte-identical copy of
+ * _standards/templates/helper-metadata-testcase.php. What is left here is the
+ * three declarations that class cannot derive, the hooks it reaches back
+ * through, and the assertions that are genuinely about this plugin: that it
+ * owns two option rows and no more because its shares are data in a table of
+ * their own, that the file it cannot include still names the same rows, and
+ * that it fires exactly one hook.
  *
  * @package wp-draftsforfriends
  */
 
 /**
- * Asserts the things that are the same in all nineteen plugins: the readme
- * header, the canonical section list, the option rows, the absence of jQuery and
- * of an RTL stylesheet. None of it is specific to sharing drafts; all of it is
- * the sort of drift nobody notices until a release goes out with it.
+ * WP-DraftsForFriends against §7.2.
  */
-class WP_DraftsForFriends_Metadata_Test extends WP_DraftsForFriends_TestCase {
+class WP_DraftsForFriends_Metadata_Test extends Plugin_Metadata_TestCase {
 
 	/**
-	 * The plugin root.
+	 * The version this release ships.
 	 *
-	 * @var string
+	 * @return string
 	 */
-	private $root;
-
-	/**
-	 * Records the plugin root once per test.
-	 */
-	public function set_up() {
-		parent::set_up();
-
-		$this->root = dirname( __DIR__ );
+	protected function expected_version() {
+		return '2.0.0';
 	}
 
 	/**
-	 * The readme header, as an array of raw lines.
+	 * The prefix every class the plugin declares carries.
+	 *
+	 * @return string
+	 */
+	protected function class_prefix() {
+		return 'WP_DraftsForFriends';
+	}
+
+	/**
+	 * Every break a site owner updating from the released 2.4.0 would notice.
+	 *
+	 * The screen's address changed, the row actions became bulk actions, the
+	 * class and its ajax endpoint are gone, and the plugin grew settings and a
+	 * capability filter. The preview links themselves are the one thing that
+	 * deliberately did not change, and the notice has to say so.
+	 *
+	 * @return string[]
+	 */
+	protected function upgrade_notice_subjects() {
+		return array(
+			'6.8',
+			'8.2',
+			// The screen that moved, old address and new.
+			'edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php',
+			'edit.php?page=wp-draftsforfriends',
+			// The links already sent, which are unchanged.
+			'draftsforfriends=',
+			// The rows the plugin stores, and the pre-2.0.0 one it clears.
+			'wp_draftsforfriends_options',
+			'wp_draftsforfriends_version',
+			'draftsforfriends_db_version',
+			// The retired sort parameters.
+			'dff_sortby',
+			'dff_sortorder',
+			// For code written against the plugin.
+			'WPDraftsForFriends',
+			'wp_ajax_draftsforfriends_admin',
+			'wp_draftsforfriends_capability',
+			'option_page_capability_wp_draftsforfriends_options',
+			// The two capabilities the screen and its tabs are gated on.
+			'publish_posts',
+			'manage_options',
+		);
+	}
+
+	/**
+	 * The settings row and the marker row.
+	 *
+	 * @return void
+	 */
+	protected function seed_option_rows() {
+		WP_DraftsForFriends_Install::maybe_upgrade();
+	}
+
+	/**
+	 * Write the marker row through the plugin's own upgrade routine.
+	 *
+	 * @return void
+	 */
+	protected function write_version_row() {
+		WP_DraftsForFriends_Install::maybe_upgrade();
+	}
+
+	/**
+	 * Round-trip the settings sanitiser.
+	 *
+	 * @param array $input What the settings form is pretending to have posted.
+	 * @return array
+	 */
+	protected function sanitize_settings( array $input ) {
+		return (array) WP_DraftsForFriends_Options::sanitize( $input );
+	}
+
+	/**
+	 * The two real settings keys, so the sanitiser has work of its own to do.
 	 *
 	 * @return array
 	 */
-	private function readme_header() {
-		$lines = explode( "\n", file_get_contents( $this->root . '/README.md' ) );
-
-		// Line 0 is the "# WP-DraftsForFriends" heading; the header runs to the
-		// first blank line.
-		$header = array();
-
-		foreach ( array_slice( $lines, 1 ) as $line ) {
-			if ( '' === trim( $line ) ) {
-				break;
-			}
-
-			$header[] = $line;
-		}
-
-		return $header;
+	protected function settings_fixture() {
+		return array(
+			'expires' => 3,
+			'measure' => 'd',
+		);
 	}
 
 	/**
-	 * One field from the plugin header comment.
+	 * Register the admin bundle.
 	 *
-	 * @param string $field Field name, including the colon.
-	 * @return string
-	 */
-	private function plugin_header( $field ) {
-		preg_match(
-			'/^\s*\*\s*' . preg_quote( $field, '/' ) . '\s*(.+?)\s*$/m',
-			file_get_contents( $this->root . '/wp-draftsforfriends.php' ),
-			$matches
-		);
-
-		return isset( $matches[1] ) ? $matches[1] : '';
-	}
-
-	/**
-	 * One field from the readme header.
+	 * It is enqueued off the screen's hook suffix, which only exists once the
+	 * menu has been registered, and the menu is only registered for a user who
+	 * may reach it.
 	 *
-	 * @param string $field Field name, including the colon.
-	 * @return string
+	 * @return void
 	 */
-	private function readme_field( $field ) {
-		preg_match(
-			'/^' . preg_quote( $field, '/' ) . '\s*(.+?)\s*$/m',
-			file_get_contents( $this->root . '/README.md' ),
-			$matches
-		);
-
-		return isset( $matches[1] ) ? $matches[1] : '';
-	}
-
-	/**
-	 * Every option row name the plugin owns, in the database, sorted.
-	 *
-	 * @return array
-	 */
-	private function option_rows() {
-		global $wpdb;
-
-		$rows = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s",
-				'wp\_draftsforfriends\_%'
-			)
-		);
-
-		sort( $rows );
-
-		return $rows;
-	}
-
-	public function test_every_readme_header_line_keeps_its_line_break() {
-		$header = $this->readme_header();
-
-		$this->assertCount( 9, $header, 'The readme header is not nine fields long.' );
-
-		foreach ( array_slice( $header, 0, 8 ) as $line ) {
-			$this->assertStringEndsWith(
-				'  ',
-				$line,
-				'"' . trim( $line ) . '" lost the two trailing spaces that keep its line break.'
-			);
-		}
-
-		$last = $header[8];
-
-		$this->assertSame( rtrim( $last ), $last, 'The last header line must not have trailing spaces.' );
-	}
-
-	public function test_the_readme_header_carries_exactly_five_tags() {
-		$tags = array_filter( array_map( 'trim', explode( ',', $this->readme_field( 'Tags:' ) ) ) );
-
-		$this->assertCount( 5, $tags, '§3.2 asks for exactly five tags.' );
-	}
-
-	public function test_canonical_lesterchan_urls() {
-		$this->assertSame( 'https://lesterchan.net/portfolio/programming/php/', $this->plugin_header( 'Plugin URI:' ), 'The Plugin URI is not the canonical one.' );
-		$this->assertSame( 'https://lesterchan.net', $this->plugin_header( 'Author URI:' ), 'The Author URI is not the canonical one.' );
-		$this->assertSame( 'https://lesterchan.net/site/donation/', $this->readme_field( 'Donate link:' ), 'The Donate link is not the canonical one.' );
-		$this->assertSame( 'https://www.gnu.org/licenses/gpl-2.0.html', $this->plugin_header( 'License URI:' ), 'The header License URI is not the canonical one.' );
-		$this->assertSame( 'https://www.gnu.org/licenses/gpl-2.0.html', $this->readme_field( 'License URI:' ), 'The readme License URI is not the canonical one.' );
-	}
-
-	public function test_contributors_is_gamerz_only() {
-		$this->assertSame( 'GamerZ', $this->readme_field( 'Contributors:' ), 'The Contributors field is not exactly GamerZ.' );
-	}
-
-	public function test_text_domain_is_the_plugin_slug() {
-		$this->assertSame( 'wp-draftsforfriends', $this->plugin_header( 'Text Domain:' ), 'The text domain is not the plugin slug.' );
-		$this->assertSame( '/languages', $this->plugin_header( 'Domain Path:' ), 'The domain path is not /languages.' );
-		$this->assertSame( 'wp-draftsforfriends', WP_DRAFTSFORFRIENDS_SLUG, 'WP_DRAFTSFORFRIENDS_SLUG is not the plugin slug.' );
-	}
-
-	public function test_version_matches_everywhere() {
-		$this->assertSame( WP_DRAFTSFORFRIENDS_VERSION, $this->plugin_header( 'Version:' ), 'The header version and WP_DRAFTSFORFRIENDS_VERSION disagree.' );
-		$this->assertSame( WP_DRAFTSFORFRIENDS_VERSION, $this->readme_field( 'Stable tag:' ), 'The readme stable tag and WP_DRAFTSFORFRIENDS_VERSION disagree.' );
-		$this->assertMatchesRegularExpression( '/^\d+\.\d+\.\d+$/', WP_DRAFTSFORFRIENDS_VERSION, 'The version is not three numbers.' );
-	}
-
-	public function test_requires_headers_match_readme() {
-		$this->assertSame( '6.8', $this->plugin_header( 'Requires at least:' ), 'The header WordPress floor is not 6.8.' );
-		$this->assertSame( '8.2', $this->plugin_header( 'Requires PHP:' ), 'The header PHP floor is not 8.2.' );
-		$this->assertSame( $this->plugin_header( 'Requires at least:' ), $this->readme_field( 'Requires at least:' ), 'The header and readme disagree about the WordPress floor.' );
-		$this->assertSame( $this->plugin_header( 'Requires PHP:' ), $this->readme_field( 'Requires PHP:' ), 'The header and readme disagree about the PHP floor.' );
-	}
-
-	public function test_the_licence_block_is_the_or_later_variant() {
-		$source = file_get_contents( $this->root . '/wp-draftsforfriends.php' );
-
-		$this->assertSame( 'GPLv2 or later', $this->plugin_header( 'License:' ), 'The header licence is not GPLv2 or later.' );
-		$this->assertStringContainsString(
-			'(at your option) any later version',
-			$source,
-			'The GPL block is the version 2 only variant, which contradicts the header two lines above it.'
-		);
-	}
-
-	public function test_readme_sections_are_the_canonical_set() {
-		preg_match_all( '/^## .+$/m', file_get_contents( $this->root . '/README.md' ), $matches );
-
-		$this->assertSame(
-			array(
-				'## Description',
-				'## Usage',
-				'## Frequently Asked Questions',
-				'## Screenshots',
-				'## Changelog',
-				'## Upgrade Notice',
-			),
-			array_map( 'rtrim', $matches[0] ),
-			'The readme level two headings are not the canonical set, in order.'
-		);
-	}
-
-	public function test_donations_is_the_last_h3_of_the_description() {
-		$readme      = file_get_contents( $this->root . '/README.md' );
-		$description = substr( $readme, strpos( $readme, '## Description' ) );
-		$description = substr( $description, 0, strpos( $description, '## Usage' ) );
-
-		preg_match_all( '/^### .+$/m', $description, $matches );
-
-		$this->assertSame( '### Donations', rtrim( end( $matches[0] ) ), 'Donations is not the last h3 of the description.' );
-		$this->assertStringContainsString(
-			'I spent most of my free time creating, updating, maintaining and supporting these plugins, if you really love my plugins and could spare me a couple of bucks, I will really appreciate it. If not feel free to use it without any obligations.',
-			$description,
-			'The Donations paragraph is not the agreed wording.'
-		);
-	}
-
-	public function test_changelog_prefixes_are_canonical() {
-		$readme    = file_get_contents( $this->root . '/README.md' );
-		$changelog = substr( $readme, strpos( $readme, '## Changelog' ) );
-		$changelog = substr( $changelog, 0, strpos( $changelog, '## Upgrade Notice' ) );
-
-		preg_match_all( '/^\* (.+)$/m', $changelog, $matches );
-
-		$this->assertNotEmpty( $matches[1], 'The changelog has no entries at all.' );
-
-		foreach ( $matches[1] as $entry ) {
-			$this->assertMatchesRegularExpression(
-				'/^(BREAKING|NEW|CHANGED|FIXED|NOTE): /',
-				$entry,
-				'"' . $entry . '" does not start with one of the five allowed prefixes.'
-			);
-		}
-	}
-
-	public function test_the_raised_floors_are_recorded_as_a_breaking_change() {
-		$readme = file_get_contents( $this->root . '/README.md' );
-
-		$this->assertStringContainsString(
-			'BREAKING: Requires WordPress 6.8 and PHP 8.2',
-			$readme,
-			'The raised floors are not a BREAKING changelog line.'
-		);
-
-		$notice = substr( $readme, strpos( $readme, '## Upgrade Notice' ) );
-
-		$this->assertStringContainsString( '6.8', $notice, 'The upgrade notice does not mention the WordPress floor.' );
-		$this->assertStringContainsString( '8.2', $notice, 'The upgrade notice does not mention the PHP floor.' );
-	}
-
-	public function test_no_jquery_is_enqueued() {
+	protected function register_plugin_assets() {
 		wp_set_current_user( $this->author_id );
 
 		$this->register_admin_menu();
 
 		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
-
-		$checked = 0;
-
-		foreach ( wp_scripts()->registered as $handle => $script ) {
-			if ( 0 !== strpos( $handle, 'wp-draftsforfriends' ) ) {
-				continue;
-			}
-
-			++$checked;
-
-			$this->assertSame( array(), $script->deps, "The '{$handle}' script declares a dependency; §6 wants none, least of all jQuery." );
-		}
-
-		$this->assertGreaterThan( 0, $checked, 'No script of the plugin was registered, so this proves nothing.' );
-
-		// Both halves matter: a dependency array built at runtime passes a grep,
-		// and a source file using the alias passes a deps check.
-		foreach ( glob( $this->root . '/js/*.js' ) as $file ) {
-			// Comments stripped: the file's own header records that it was
-			// "Rewritten without jQuery for 2.0.0", which is the opposite of what
-			// a substring search reads it as.
-			$source = $this->js_without_comments( $file );
-
-			$this->assertStringNotContainsString( 'jQuery', $source, basename( $file ) . ' still references jQuery.' );
-			$this->assertStringNotContainsString( '$(', $source, basename( $file ) . ' still uses the jQuery alias.' );
-		}
 	}
 
-	public function test_no_rtl_stylesheet_is_registered() {
-		$this->assertSame( array(), glob( $this->root . '/css/*-rtl.css' ), 'The plugin ships an RTL stylesheet.' );
-
-		wp_set_current_user( $this->author_id );
-
-		$this->register_admin_menu();
-
-		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
-
-		foreach ( wp_styles()->registered as $handle => $style ) {
-			if ( 0 !== strpos( $handle, 'wp-draftsforfriends' ) ) {
-				continue;
-			}
-
-			$this->assertArrayNotHasKey( 'rtl', $style->extra, "The '{$handle}' style registers rtl data." );
-		}
-	}
-
-	public function test_the_stylesheet_uses_no_physical_properties() {
-		foreach ( glob( $this->root . '/css/*.css' ) as $file ) {
-			$rules = preg_replace( '#/\*.*?\*/#s', '', file_get_contents( $file ) );
-
-			$this->assertDoesNotMatchRegularExpression(
-				'/(margin|padding|border)-(left|right)\s*:|(^|[;{\s])(left|right)\s*:|text-align\s*:\s*(left|right)|float\s*:\s*(left|right)/mi',
-				$rules,
-				basename( $file ) . ' uses a physical property; §5.1 wants logical ones so no RTL sheet is needed.'
-			);
-
-			$this->assertStringNotContainsString( '!important', $rules, basename( $file ) . ' uses !important.' );
-		}
-	}
-
-	public function test_every_directory_has_an_index_php() {
-		$directories = new RecursiveIteratorIterator(
-			new RecursiveCallbackFilterIterator(
-				new RecursiveDirectoryIterator( $this->root, FilesystemIterator::SKIP_DOTS ),
-				// A pruning filter, not one applied after the fact: a plain filter
-				// descends into node_modules and vendor before discarding them,
-				// which is slow enough to look like a hang.
-				static function ( $file ) {
-					$name = $file->getFilename();
-
-					return ! in_array( $name, array( 'vendor', 'node_modules', '.git', '.github', '.claude', 'artifacts' ), true )
-						&& 0 !== strpos( $name, '.' );
-				}
-			),
-			RecursiveIteratorIterator::SELF_FIRST
-		);
-
-		$checked = 0;
-
-		foreach ( $directories as $file ) {
-			if ( ! $file->isDir() ) {
-				continue;
-			}
-
-			++$checked;
-
-			$this->assertFileExists(
-				$file->getPathname() . '/index.php',
-				str_replace( $this->root . '/', '', $file->getPathname() ) . ' has no index.php.'
-			);
-		}
-
-		$this->assertGreaterThan( 0, $checked, 'No directories were checked at all.' );
-		$this->assertFileExists( $this->root . '/index.php', 'The plugin root has no index.php.' );
-	}
-
+	/**
+	 * Two option rows, and the shares are not among them.
+	 *
+	 * The settings and the markers are configuration; a share is data, and data
+	 * belongs in the plugin's own table rather than in an ever-growing option
+	 * row that every request autoloads.
+	 */
 	public function test_the_plugin_owns_exactly_two_option_rows() {
 		WP_DraftsForFriends_Install::maybe_upgrade();
 
+		$rows = $this->stored_option_names();
+		sort( $rows );
+
 		$this->assertSame(
 			array( WP_DraftsForFriends_Options::OPTION, WP_DraftsForFriends_Options::VERSION ),
-			$this->option_rows(),
+			$rows,
 			'The plugin owns option rows beyond its settings and its version markers. The shares are data and live in their own table.'
 		);
 	}
 
-	public function test_uninstall_removes_every_option_row() {
-		WP_DraftsForFriends_Install::maybe_upgrade();
-
-		$this->assertNotEmpty( $this->option_rows(), 'There was nothing to uninstall, so this proves nothing.' );
-
-		$this->run_uninstall();
-
-		$this->assertSame( array(), $this->option_rows(), 'A wp_draftsforfriends_ option row survived the uninstall.' );
-
-		// run_uninstall() performs the deletions rather than requiring the file,
-		// because requiring it would drop the table the rest of the suite runs
-		// against. So the file is asserted to name the same rows.
-		$uninstall = file_get_contents( $this->root . '/uninstall.php' );
+	/**
+	 * The uninstaller names the same rows, and drops the table.
+	 *
+	 * The suite's run_uninstall() performs the deletions rather than requiring
+	 * the file, because requiring it would drop the table the rest of the suite
+	 * runs against. That indirection is only honest if the file itself is
+	 * checked to name the same rows, which is what this does.
+	 */
+	public function test_uninstall_php_names_the_same_rows_and_drops_the_table() {
+		$uninstall = (string) file_get_contents( $this->metadata_root() . '/uninstall.php' );
 
 		$this->assertStringContainsString( "'" . WP_DraftsForFriends_Options::OPTION . "'", $uninstall, 'uninstall.php does not delete the settings row.' );
 		$this->assertStringContainsString( "'" . WP_DraftsForFriends_Options::VERSION . "'", $uninstall, 'uninstall.php does not delete the version row.' );
@@ -367,6 +168,12 @@ class WP_DraftsForFriends_Metadata_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertStringContainsString( 'WP_DraftsForFriends_Install::drop_table()', $uninstall, 'uninstall.php does not drop the plugin table.' );
 	}
 
+	/**
+	 * The uninstaller walks the whole network, not the first hundred sites.
+	 *
+	 * A source guard because the thing it guards cannot be exercised: building
+	 * a 101-site network to prove the hundred-and-first is reached is not on.
+	 */
 	public function test_uninstall_walks_the_whole_network() {
 		$uninstall = $this->source_without_comments( 'uninstall.php' );
 
@@ -381,63 +188,36 @@ class WP_DraftsForFriends_Metadata_Test extends WP_DraftsForFriends_TestCase {
 		);
 	}
 
-	public function test_version_row_holds_exactly_plugin_and_db() {
-		WP_DraftsForFriends_Install::maybe_upgrade();
-
-		$row = get_option( WP_DraftsForFriends_Options::VERSION );
-
-		$this->assertIsArray( $row, 'The version row is not an array.' );
-		$this->assertSame( array( 'plugin', 'db' ), array_keys( $row ), 'The version row does not hold exactly the plugin and db markers.' );
-	}
-
-	public function test_settings_sanitizer_never_stores_version_markers() {
+	/**
+	 * The settings row holds those two keys and nothing else.
+	 *
+	 * The shared test proves no version marker survives the sanitiser. This one
+	 * is the other half: the sanitiser is also a whitelist, so a field added to
+	 * the form and not to the sanitiser never reaches the row.
+	 */
+	public function test_the_settings_row_holds_exactly_its_two_keys() {
 		$clean = WP_DraftsForFriends_Options::sanitize(
 			array(
-				'expires'    => 3,
-				'measure'    => 'd',
-				'version'    => '2.0.0',
-				'db_version' => '1',
-				'versions'   => array( 'plugin' => '2.0.0' ),
+				'expires' => 3,
+				'measure' => 'd',
+				'colour'  => 'red',
 			)
 		);
-
-		foreach ( array( 'version', 'db_version', 'versions' ) as $key ) {
-			$this->assertArrayNotHasKey( $key, $clean, "The sanitiser stored a '{$key}' key in the settings row." );
-		}
 
 		$this->assertSame( array( 'expires', 'measure' ), array_keys( $clean ), 'The sanitiser returned keys the settings row does not own.' );
 	}
 
-	public function test_the_six_php_constants_are_defined() {
-		foreach ( array( 'VERSION', 'DB_VERSION', 'SLUG', 'MAIN_FILE', 'DIR', 'URL' ) as $suffix ) {
-			$this->assertTrue( defined( 'WP_DRAFTSFORFRIENDS_' . $suffix ), 'WP_DRAFTSFORFRIENDS_' . $suffix . ' is not defined.' );
-		}
-
-		$this->assertSame( plugin_dir_path( WP_DRAFTSFORFRIENDS_MAIN_FILE ), WP_DRAFTSFORFRIENDS_DIR, 'WP_DRAFTSFORFRIENDS_DIR is not derived from the main file.' );
-		$this->assertSame( plugin_dir_url( WP_DRAFTSFORFRIENDS_MAIN_FILE ), WP_DRAFTSFORFRIENDS_URL, 'WP_DRAFTSFORFRIENDS_URL is not derived from the main file.' );
-	}
-
-	public function test_every_class_is_prefixed_and_lives_in_its_own_file() {
-		foreach ( glob( $this->root . '/includes/class-*.php' ) as $file ) {
-			preg_match_all( '/^\s*(?:final\s+|abstract\s+)?class\s+(\w+)/m', file_get_contents( $file ), $matches );
-
-			$this->assertCount( 1, $matches[1], basename( $file ) . ' does not declare exactly one class.' );
-
-			$class = $matches[1][0];
-
-			$this->assertStringStartsWith( 'WP_DraftsForFriends', $class, $class . ' is not prefixed with the plugin class prefix.' );
-			$this->assertSame(
-				'class-' . strtolower( str_replace( '_', '-', $class ) ) . '.php',
-				basename( $file ),
-				$class . ' is not in the file §2.4 names for it.'
-			);
-		}
-	}
-
-	public function test_the_plugin_fires_only_prefixed_hooks() {
+	/**
+	 * One hook, deliberately.
+	 *
+	 * Not merely "every hook is prefixed" - the set itself is asserted, because
+	 * the plugin previously fired none of its own and every addition to that
+	 * list is a public API this collection then has to keep.
+	 */
+	public function test_the_plugin_fires_exactly_one_hook() {
 		$fired = array();
 
-		foreach ( glob( $this->root . '/includes/*.php' ) as $file ) {
+		foreach ( (array) glob( $this->metadata_root() . '/includes/*.php' ) as $file ) {
 			preg_match_all(
 				'/(?:apply_filters|do_action)(?:_ref_array)?\(\s*\'([a-z0-9_]+)\'/',
 				$this->source_without_comments( 'includes/' . basename( $file ) ),
@@ -447,152 +227,83 @@ class WP_DraftsForFriends_Metadata_Test extends WP_DraftsForFriends_TestCase {
 			$fired = array_merge( $fired, $matches[1] );
 		}
 
-		foreach ( array_unique( $fired ) as $hook ) {
-			$this->assertStringStartsWith( 'wp_draftsforfriends_', $hook, "The '{$hook}' hook is not prefixed with the plugin's own prefix." );
-		}
-
-		// One, deliberately. See the class docblock on WP_DraftsForFriends_Admin.
-		$this->assertSame( array( 'wp_draftsforfriends_capability' ), array_values( array_unique( $fired ) ), 'The set of hooks this plugin fires has changed.' );
-	}
-	/**
-	 * The plugin root, whatever the checkout is called.
-	 *
-	 * @return string
-	 */
-	protected function metadata_root() {
-		return dirname( __DIR__ );
-	}
-
-	/**
-	 * Every PHP file the plugin ships, concatenated.
-	 *
-	 * @return string
-	 */
-	protected function metadata_source() {
-		$source = '';
-
-		foreach ( (array) glob( $this->metadata_root() . '/*.php' ) as $file ) {
-			$source .= (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the plugin's own source in a test.
-		}
-
-		foreach ( (array) glob( $this->metadata_root() . '/includes/*.php' ) as $file ) {
-			$source .= (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the plugin's own source in a test.
-		}
-
-		return $this->without_comments( $source );
-	}
-
-	/**
-	 * The same source with every comment removed.
-	 *
-	 * A test that greps the source for a call it does not want finds the comment
-	 * explaining why the call is absent, and fails the plugin for documenting
-	 * itself. wp-sweep says "There is no load_plugin_textdomain() call" and was
-	 * failed for saying so. Tokenising is the only honest way to tell code from
-	 * prose about code.
-	 *
-	 * @param string $source PHP source.
-	 * @return string
-	 */
-	protected function without_comments( $source ) {
-		$code = '';
-
-		foreach ( token_get_all( $source ) as $token ) {
-			if ( is_array( $token ) ) {
-				if ( T_COMMENT === $token[0] || T_DOC_COMMENT === $token[0] ) {
-					continue;
-				}
-				$code .= $token[1];
-				continue;
-			}
-
-			$code .= $token;
-		}
-
-		return $code;
-	}
-
-	/**
-	 * The GPL text ships with the plugin.
-	 *
-	 * @return void
-	 */
-	public function test_the_gpl_licence_is_shipped() {
-		$licence = (string) file_get_contents( $this->metadata_root() . '/LICENSE' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the plugin's own licence in a test.
-
-		$this->assertStringContainsString( 'GNU GENERAL PUBLIC LICENSE', $licence, 'The GPL text must ship with the plugin.' );
-		$this->assertStringContainsString( 'Version 2, June 1991', $licence, 'The licence must be GPLv2, matching the plugin header.' );
-	}
-
-	/**
-	 * The plugin header fields appear in the canonical order.
-	 *
-	 * @return void
-	 */
-	public function test_the_plugin_header_fields_are_in_the_canonical_order() {
-		$expected = array(
-			'Plugin Name',
-			'Plugin URI',
-			'Description',
-			'Version',
-			'Requires at least',
-			'Requires PHP',
-			'Author',
-			'Author URI',
-			'License',
-			'License URI',
-			'Text Domain',
-			'Domain Path',
-		);
-
-		// The main file is named for the directory, which is what wordpress.org
-		// installs it as.
-		$main = $this->metadata_root() . '/' . basename( $this->metadata_root() ) . '.php';
-		$this->assertFileExists( $main, 'The main plugin file is named after the plugin directory.' );
-
-		preg_match( '#^<\?php\s*/\*\*(.+?)\*/#s', (string) file_get_contents( $main ), $matches ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the plugin's own source in a test.
-		$this->assertNotEmpty( $matches, 'The plugin file must open with a docblock header.' );
-
-		preg_match_all( '/^\s*\*\s*([A-Z][A-Za-z ]*?):\s/m', $matches[1], $fields );
-
-		$this->assertSame( $expected, $fields[1], 'Plugin header fields must appear in the canonical order.' );
-	}
-
-	/**
-	 * The plugin leaves loading its translations to WordPress.
-	 *
-	 * @return void
-	 */
-	public function test_the_plugin_does_not_load_its_own_textdomain() {
-		// WordPress has loaded translations for wordpress.org plugins itself
-		// since 4.6, so a load_plugin_textdomain() call is dead weight that
-		// also fires before the plugin is on the translation server.
-		$this->assertStringNotContainsString(
-			'load_plugin_textdomain',
-			$this->metadata_source(),
-			'WordPress loads the textdomain itself since 4.6.'
+		$this->assertSame(
+			array( 'wp_draftsforfriends_capability' ),
+			array_values( array_unique( $fired ) ),
+			'The set of hooks this plugin fires has changed.'
 		);
 	}
 
 	/**
-	 * No build, editor or translation artefacts ship.
-	 *
-	 * @return void
+	 * Five tags, which is the most wordpress.org indexes.
 	 */
-	public function test_no_abandoned_build_or_translation_artefacts_ship() {
-		$root = $this->metadata_root();
+	public function test_the_readme_header_carries_exactly_five_tags() {
+		$tags = array_filter( array_map( 'trim', explode( ',', $this->readme_field( 'Tags' ) ) ) );
 
-		$this->assertFileDoesNotExist( $root . '/.travis.yml', 'CI is GitHub Actions.' );
-		$this->assertFileDoesNotExist( $root . '/.wp-env.override.json', 'A personal wp-env override must not ship.' );
-		$this->assertDirectoryDoesNotExist( $root . '/languages', 'translate.wordpress.org builds the catalogue.' );
-		$this->assertDirectoryDoesNotExist( $root . '/.idea', 'Editor settings must not ship.' );
+		$this->assertCount( 5, $tags, '§3.2 asks for exactly five tags.' );
+	}
 
-		foreach ( array( 'pot', 'po', 'mo' ) as $extension ) {
-			$this->assertSame(
-				array(),
-				(array) glob( $root . '/*.' . $extension ),
-				"No .{$extension} files: translate.wordpress.org builds the catalogue."
+	/**
+	 * The copyright block agrees with the header two lines above it.
+	 */
+	public function test_the_licence_block_is_the_or_later_variant() {
+		$this->assertSame( 'GPLv2 or later', $this->header_field( 'License' ), 'The header licence is not GPLv2 or later.' );
+		$this->assertStringContainsString(
+			'(at your option) any later version',
+			$this->plugin_file(),
+			'The GPL block is the version 2 only variant, which contradicts the header two lines above it.'
+		);
+	}
+
+	/**
+	 * Donations is the last h3 of the Description, with one exact wording.
+	 */
+	public function test_donations_is_the_last_h3_of_the_description() {
+		$readme      = $this->readme();
+		$description = substr( $readme, (int) strpos( $readme, '## Description' ) );
+		$description = substr( $description, 0, (int) strpos( $description, '## Usage' ) );
+
+		preg_match_all( '/^### .+$/m', $description, $matches );
+
+		$this->assertSame( '### Donations', rtrim( (string) end( $matches[0] ) ), 'Donations is not the last h3 of the description.' );
+		$this->assertStringContainsString(
+			'I spent most of my free time creating, updating, maintaining and supporting these plugins, if you really love my plugins and could spare me a couple of bucks, I will really appreciate it. If not feel free to use it without any obligations.',
+			$description,
+			'The Donations paragraph is not the agreed wording.'
+		);
+	}
+
+	/**
+	 * The raised floors are a BREAKING changelog line, not only a notice.
+	 *
+	 * A site below them is not offered the update at all, so it is the one
+	 * change that has to be findable in both places.
+	 */
+	public function test_the_raised_floors_are_recorded_as_a_breaking_change() {
+		$this->assertStringContainsString(
+			'BREAKING: Requires WordPress 6.8 and PHP 8.2',
+			$this->readme(),
+			'The raised floors are not a BREAKING changelog line.'
+		);
+	}
+
+	/**
+	 * The stylesheets use logical properties only.
+	 *
+	 * §5.1: this is what makes a second, mirrored sheet unnecessary, so it is
+	 * asserted rather than left to the absence of one.
+	 */
+	public function test_the_stylesheet_uses_no_physical_properties() {
+		foreach ( (array) glob( $this->metadata_root() . '/css/*.css' ) as $file ) {
+			$rules = (string) preg_replace( '#/\*.*?\*/#s', '', (string) file_get_contents( $file ) );
+
+			$this->assertDoesNotMatchRegularExpression(
+				'/(margin|padding|border)-(left|right)\s*:|(^|[;{\s])(left|right)\s*:|text-align\s*:\s*(left|right)|float\s*:\s*(left|right)/mi',
+				$rules,
+				basename( $file ) . ' uses a physical property; §5.1 wants logical ones so no RTL sheet is needed.'
 			);
+
+			$this->assertStringNotContainsString( '!important', $rules, basename( $file ) . ' uses !important.' );
 		}
 	}
 }
