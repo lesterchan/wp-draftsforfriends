@@ -127,32 +127,6 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 * FIXED: Fixed several PHP 8 warnings.
 * NOTE: Every database query is now a single prepared statement with every value bound, including the sort column, which goes through the `%i` identifier placeholder.
 
-### 1.0.2
-* NEW: It now supports multisite network activation
-
-### 1.0.1
-* FIXED: Extending shared drafts now works
-
-### 1.0.0
-* NEW: Uses its own table `wp_draftsforfriends` instead of relying on the `shared` field in `wp_options`
-* NEW: New Date Created, Date Extended and Expires After columns
-* NEW: Pagination of shared drafts is now supported
-* NEW: Sorting of shared drafts is now supported
-* NEW: If you have `edit_others_posts` capabilities (super admin, admin and editor), you are able to see and share all draft posts
-* NEW: An author is able to see and share their own draft posts
-* NEW: When your friend views the draft post, the comment status is now closed
-* NEW: The link hash now checks for expiry as well
-* NEW: The link hash is no longer 8 characters with special characters, it is now 32 characters with no special characters
-* NEW: Added a nonce security check
-* NEW: Added a 32x32 icon to the plugin
-* CHANGED: Moved the JavaScript and CSS out of the plugin code into their own files, so there is a new `js` and `css` folder
-* CHANGED: Adding, deleting and extending a shared draft is now AJAXified, and still works in a browser without JavaScript
-* CHANGED: phpDoc comments are added to the code
-* FIXED: Fixed PHP notices
-
-### 0.0.1
-* NEW: Initial release
-
 ## Upgrade Notice
 
 ### 2.0.0
