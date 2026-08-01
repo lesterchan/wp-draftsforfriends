@@ -311,7 +311,7 @@ class WP_DraftsForFriends_Metadata_Test extends WP_DraftsForFriends_TestCase {
 				static function ( $file ) {
 					$name = $file->getFilename();
 
-					return ! in_array( $name, array( 'vendor', 'node_modules', '.git', '.github', '.claude' ), true )
+					return ! in_array( $name, array( 'vendor', 'node_modules', '.git', '.github', '.claude', 'artifacts' ), true )
 						&& 0 !== strpos( $name, '.' );
 				}
 			),
