@@ -123,7 +123,14 @@ test.describe( 'Drafts for friends settings', () => {
 					const screen = await fetch( url, { credentials: 'same-origin' } );
 					const html = await screen.text();
 					const doc = new DOMParser().parseFromString( html, 'text/html' );
-					const form = doc.querySelector( 'form[action="options.php"]' );
+					// Matched on the end of the action, not the whole of it. The
+					// screen renders the form with
+					// action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>"
+					// (class-wp-draftsforfriends-settings.php:227), so the
+					// attribute holds an absolute URL and the exact-value
+					// selector matched nothing -- FormData( null ) was the
+					// error, several lines away from the cause.
+					const form = doc.querySelector( 'form[action$="options.php"]' );
 					const body = new URLSearchParams( new FormData( form ) );
 
 					body.set( 'wp_draftsforfriends_options[expires]', value );

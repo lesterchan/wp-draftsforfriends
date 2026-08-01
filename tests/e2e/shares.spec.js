@@ -360,14 +360,20 @@ test.describe( 'Sharing a draft', () => {
 		await expect( page.locator( '.tablenav-pages .total-pages' ).first() ).toHaveText( '2' );
 
 		// Per user, not per site, which is the whole point of a screen option.
+		//
+		// The administrator by login, not get_current_user_id(): wpEval() is
+		// `wp eval` in the CLI container, which has no logged-in user, so that
+		// call is 0 there and the read was always get_user_meta( 0, ... ).
 		expect(
 			wpEval(
-				`echo '<<<' . get_user_meta( get_current_user_id(), 'wp_draftsforfriends_per_page', true ) . '>>>';`,
+				`$admin = get_user_by( 'login', 'admin' );
+				echo '<<<' . get_user_meta( $admin->ID, 'wp_draftsforfriends_per_page', true ) . '>>>';`,
 			),
 		).toBe( '2' );
 
 		wpEval(
-			`delete_user_meta( get_current_user_id(), 'wp_draftsforfriends_per_page' );
+			`$admin = get_user_by( 'login', 'admin' );
+			delete_user_meta( $admin->ID, 'wp_draftsforfriends_per_page' );
 			echo '<<<done>>>';`,
 		);
 	} );
