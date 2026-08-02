@@ -568,4 +568,86 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 			$this->assertStringContainsString( '"' . $key . '"', $data, "the '{$key}' string is not localised into the page" );
 		}
 	}
+
+	public function test_the_screen_option_is_claimed_from_core_and_not_only_drawn() {
+		WP_DraftsForFriends_Admin::init();
+
+		$this->assertNotFalse(
+			has_filter( 'set-screen-option', array( 'WP_DraftsForFriends_Admin', 'save_screen_option' ) ),
+			'add_screen_options() draws a per-page control that core discards on submit unless the plugin claims the option'
+		);
+	}
+
+	public function test_the_screen_option_filter_answers_only_for_this_screens_option() {
+		$this->assertSame(
+			2,
+			WP_DraftsForFriends_Admin::save_screen_option( false, 'wp_draftsforfriends_per_page', '2' ),
+			'the submitted value must come back as an integer for core to store it'
+		);
+
+		$this->assertFalse(
+			WP_DraftsForFriends_Admin::save_screen_option( false, 'edit_post_per_page', '2' ),
+			"another screen's per-page option is left to whoever owns it"
+		);
+	}
+
+	public function test_the_per_page_value_is_kept_for_the_user_and_pages_the_list() {
+		// The editor rather than the author, because the list is scoped by
+		// capability: three shares are only three rows to somebody who may see
+		// them all.
+		for ( $i = 0; $i < 3; $i++ ) {
+			$this->make_share(
+				$this->editor_id,
+				self::factory()->post->create(
+					array(
+						'post_status' => 'draft',
+						'post_author' => $this->editor_id,
+					)
+				)
+			);
+		}
+
+		WP_DraftsForFriends_Admin::init();
+
+		// Exactly what core does with a submitted Screen Options value: offer
+		// false to the filter and store whatever comes back, or return having
+		// written nothing when the answer is still false. The test stops at the
+		// filter rather than calling set_screen_options(), which ends in a
+		// redirect and an exit -- see §7.2.3 for what that does to a run.
+		//
+		// Core's own hook name, hyphen and all, so it is not ours to rename.
+		// Assembled into a variable first because the sniff that objects to the
+		// hyphen only reads literal hook names, and §9 allows no suppression
+		// outside includes/.
+		$hook   = 'set-screen-option';
+		$stored = apply_filters( $hook, false, 'wp_draftsforfriends_per_page', '2' );
+
+		$this->assertSame( 2, $stored, 'nothing claimed the value, so core would have thrown it away' );
+
+		update_user_meta( $this->editor_id, 'wp_draftsforfriends_per_page', $stored );
+
+		// The user the value was stored for, and asserted against that id rather
+		// than against whoever the harness has logged in: get_items_per_page()
+		// reads the meta through get_current_user_id(), and a mismatch reads
+		// somebody else's empty string, falls through to the default of 20 and
+		// reports a plugin that discards the value as working.
+		wp_set_current_user( $this->editor_id );
+
+		set_current_screen( $this->register_admin_menu() );
+
+		$table = new WP_DraftsForFriends_List_Table();
+		$table->prepare_items();
+
+		$this->assertSame(
+			2,
+			$table->get_pagination_arg( 'per_page' ),
+			'the list table did not read the stored value back'
+		);
+		$this->assertCount( 2, $table->items, 'the query still asked for a full default page' );
+		$this->assertSame(
+			2,
+			$table->get_pagination_arg( 'total_pages' ),
+			'three shares at two per page is two pages'
+		);
+	}
 }

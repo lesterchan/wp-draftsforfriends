@@ -125,6 +125,7 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 * FIXED: Fixed the item count above the list counting shares whose post had been deleted and which were never listed. Deleting a post permanently now deletes its shared drafts.
 * FIXED: Fixed eleven strings never being translated because of a typo in the text domain.
 * FIXED: Fixed several PHP 8 warnings.
+* FIXED: Fixed the *Shared drafts per page* screen option being thrown away when applied, so the list always paged at twenty whatever you set it to.
 * NOTE: Every database query is now a single prepared statement with every value bound, including the sort column, which goes through the `%i` identifier placeholder.
 
 ## Upgrade Notice

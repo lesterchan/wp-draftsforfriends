@@ -132,6 +132,7 @@ class WP_DraftsForFriends_Admin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'admin_enqueue_scripts' ) );
+		add_filter( 'set-screen-option', array( __CLASS__, 'save_screen_option' ), 10, 3 );
 	}
 
 	/**
@@ -278,12 +279,12 @@ class WP_DraftsForFriends_Admin {
 	/**
 	 * Offer the per-page screen option.
 	 *
-	 * Core persists any option whose name ends in _page by itself, so there is
-	 * no set-screen-option filter to add.
-	 *
 	 * Only on the tab that has a list to page through: Screen Options offering
 	 * "Shared drafts per page" above a settings form is an option about a table
 	 * that is not on screen.
+	 *
+	 * Drawing the control is half the job; save_screen_option() is the half that
+	 * keeps what it collects.
 	 *
 	 * @return void
 	 */
@@ -300,6 +301,31 @@ class WP_DraftsForFriends_Admin {
 				'option'  => 'wp_draftsforfriends_per_page',
 			)
 		);
+	}
+
+	/**
+	 * Keep the per-page value the user submitted, which core will not do alone.
+	 *
+	 * A plugin has to claim its own screen option or the value is thrown away.
+	 * set_screen_options() reaches its default arm for anything outside core's
+	 * own hardcoded list; there the _page suffix decides only whether
+	 * 'set-screen-option' is *offered*, and with nothing hooked the filtered
+	 * value stays false and core returns without writing. So the control drew,
+	 * accepted a number and silently discarded it, which is what
+	 * shares.spec.js's per-page test was failing on.
+	 *
+	 * Scoped to this plugin's own option, because the filter is fired for every
+	 * screen's per-page control: answering for somebody else's would store a
+	 * value on their behalf and take the decision away from the plugin that owns
+	 * it.
+	 *
+	 * @param mixed  $status Value core will store, false until something claims it.
+	 * @param string $option Option being saved.
+	 * @param mixed  $value  Submitted value.
+	 * @return mixed The value to store, or $status where the option is not ours.
+	 */
+	public static function save_screen_option( $status, $option, $value ) {
+		return 'wp_draftsforfriends_per_page' === $option ? (int) $value : $status;
 	}
 
 	/**
