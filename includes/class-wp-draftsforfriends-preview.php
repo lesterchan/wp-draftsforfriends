@@ -34,6 +34,51 @@ class WP_DraftsForFriends_Preview {
 	public function __construct() {
 		add_filter( 'posts_results', array( $this, 'capture' ) );
 		add_filter( 'the_posts', array( $this, 'restore' ) );
+		add_filter( 'redirect_canonical', array( $this, 'keep_the_share_url' ) );
+	}
+
+	/**
+	 * Stop WordPress rewriting a share link into the post's pretty permalink.
+	 *
+	 * Everything above depends on the query being the one `?p=<id>` produces:
+	 * WordPress fetches that row by ID, hands it to `posts_results`, and only
+	 * then drops it for being unpublished, which is the moment capture() exists
+	 * to catch. `redirect_canonical()` sends `?p=<id>` to the post's permalink
+	 * on any site with a permalink structure, and the query that arrives there
+	 * looks the post up **by slug among the public statuses** -- so an
+	 * unpublished post is not in the result set at all, `posts_results` never
+	 * sees it, and there is nothing to put back. The friend gets a 404.
+	 *
+	 * That is every ordinary site. WordPress turns pretty permalinks on during
+	 * installation whenever the server can rewrite, so the only sites where
+	 * share links worked were the ones left on plain permalinks -- which is also
+	 * the only shape the end-to-end suite ever ran against, so it passed
+	 * throughout while the feature was broken in the field.
+	 *
+	 * Suppressed only for a request carrying a hash that currently unlocks the
+	 * post it names. A wrong hash, an expired one or a link to something else
+	 * redirects exactly as it did before, so this cannot be used to keep an
+	 * ugly URL alive for anything a friend is not entitled to read.
+	 *
+	 * @since 2.0.0
+	 *
+	 * @param string|false $redirect_url Where WordPress means to send the request.
+	 * @return string|false The redirect, or false to stay put.
+	 */
+	public function keep_the_share_url( $redirect_url ) {
+		$hash = $this->requested_hash();
+
+		if ( '' === $hash ) {
+			return $redirect_url;
+		}
+
+		$post_id = (int) get_query_var( 'p' );
+
+		if ( $post_id <= 0 || ! WP_DraftsForFriends_Shares::hash_unlocks( $post_id, $hash ) ) {
+			return $redirect_url;
+		}
+
+		return false;
 	}
 
 	/**
