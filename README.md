@@ -56,6 +56,49 @@ add_filter( 'wp_draftsforfriends_capability', function ( $capability, $context )
 }, 10, 2 );
 ```
 
+`wp_draftsforfriends_share_url` filters the link a friend is given, and
+`wp_draftsforfriends_requested_hash` reads the hash back off the request. **They
+are one contract.** Change the shape of the link without teaching the plugin to
+recognise it and every share link 404s, with nothing on the admin screens
+looking wrong:
+
+```php
+add_filter( 'wp_draftsforfriends_share_url', function ( $url, $share ) {
+	return home_url( '/secret/' . $share->hash . '/' );
+}, 10, 2 );
+
+add_filter( 'wp_draftsforfriends_requested_hash', function ( $hash ) {
+	if ( '' !== $hash ) {
+		return $hash;
+	}
+
+	$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+
+	return preg_match( '#/secret/([A-Za-z0-9]+)/#', $path, $m ) ? $m[1] : '';
+} );
+```
+
+The default link is `?p=<id>` rather than the post's permalink, and that is not
+an oversight: the preview works by catching the row WordPress fetches for a bare
+post id and puts back before rendering. A permalink looks the post up by slug
+among the *public* statuses, so an unpublished post is never found at all.
+
+### Actions
+Three fire as a share moves through its life, each after the write has
+succeeded:
+
+* `wp_draftsforfriends_share_created` — the stored share, and the post it shares.
+* `wp_draftsforfriends_share_extended` — the share as it now stands, and the
+  expiry it carried before.
+* `wp_draftsforfriends_share_revoked` — the share as it was; the link has
+  already stopped working.
+
+```php
+add_action( 'wp_draftsforfriends_share_created', function ( $share, $post ) {
+	error_log( sprintf( 'Shared "%s" until %s', $post->post_title, $share->date_expired ) );
+}, 10, 2 );
+```
+
 ## Frequently Asked Questions
 
 ### Where did the Drafts for Friends page go?
@@ -105,6 +148,8 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 * NEW: Added a `Settings` tab for the default share duration, which was hardcoded to two hours.
 * NEW: Settings are stored in a single `wp_draftsforfriends_options` row and the upgrade markers in `wp_draftsforfriends_version`. Both are removed on uninstall, on a single site and across a network, along with the pre-2.0.0 `draftsforfriends_db_version` row.
 * NEW: Added the `wp_draftsforfriends_capability` filter, so either tab can be handed to another capability. It is answered by `option_page_capability_wp_draftsforfriends_options` too, so a filtered settings capability governs the save as well as the screen.
+* NEW: Added the `wp_draftsforfriends_share_created`, `wp_draftsforfriends_share_extended` and `wp_draftsforfriends_share_revoked` actions, each firing after the write has succeeded.
+* NEW: Added the `wp_draftsforfriends_share_url` filter and its companion `wp_draftsforfriends_requested_hash`. The link a friend is given and the check that lets them read it now go through one contract, so a site can move share links to a shape of its own. Filtering only the first leaves every link 404ing.
 * NEW: Added a Copy link button to each row.
 * NEW: Added a *Shared drafts per page* screen option.
 * NEW: Added a PHPUnit test suite, vitest coverage for the script, and GitHub Actions CI.

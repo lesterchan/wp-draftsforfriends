@@ -21,6 +21,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WP_DraftsForFriends_Shares {
 
 	/**
+	 * The query argument carrying the hash.
+	 *
+	 * Named once because two halves of the plugin have to agree about it:
+	 * url() writes it, and WP_DraftsForFriends_Preview reads it back off the
+	 * request. They each held the string separately, so the link a friend was
+	 * given and the check that lets them read it agreed only by coincidence.
+	 *
+	 * @var string
+	 */
+	const QUERY_VAR = 'draftsforfriends';
+
+	/**
 	 * Columns the list table is allowed to sort on.
 	 *
 	 * The column is bound with prepare()'s %i placeholder in query(), which quotes
@@ -300,10 +312,25 @@ class WP_DraftsForFriends_Shares {
 			return array( 'error' => sprintf( __( 'Error creating shared draft for \'%s\'', 'wp-draftsforfriends' ), $post->post_title ) );
 		}
 
+		$share = self::get( (int) $wpdb->insert_id );
+
+		/**
+		 * Fires after a draft has been shared.
+		 *
+		 * After the row exists, so the share passed here is the stored one
+		 * rather than what the caller asked for.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param object  $share The share row.
+		 * @param WP_Post $post  The post it shares.
+		 */
+		do_action( 'wp_draftsforfriends_share_created', $share, $post );
+
 		return array(
 			/* translators: %s: post title. */
 			'success' => sprintf( __( 'Shared draft for \'%s\' created', 'wp-draftsforfriends' ), $post->post_title ),
-			'shared'  => self::get( (int) $wpdb->insert_id ),
+			'shared'  => $share,
 		);
 	}
 
@@ -366,9 +393,26 @@ class WP_DraftsForFriends_Shares {
 			return array( 'error' => __( 'Error extending shared draft', 'wp-draftsforfriends' ) );
 		}
 
+		$extended = self::get( $id );
+
+		/**
+		 * Fires after a share's expiry has been pushed further out.
+		 *
+		 * The share is re-read first, so `date_expired` is the new one. The
+		 * previous expiry is passed alongside it because it cannot be recovered
+		 * afterwards and a listener wanting to say "extended by an hour" needs
+		 * both ends.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param object $share        The share row, as it now stands.
+		 * @param string $was_expiring The expiry it carried before, MySQL format.
+		 */
+		do_action( 'wp_draftsforfriends_share_extended', $extended, $share->date_expired );
+
 		return array(
 			'success' => __( 'Shared draft extended', 'wp-draftsforfriends' ),
-			'shared'  => self::get( $id ),
+			'shared'  => $extended,
 		);
 	}
 
@@ -406,6 +450,18 @@ class WP_DraftsForFriends_Shares {
 		if ( ! $deleted ) {
 			return array( 'error' => __( 'Error deleting shared draft', 'wp-draftsforfriends' ) );
 		}
+
+		/**
+		 * Fires after a share has been revoked.
+		 *
+		 * The row is already gone, so this is the last chance to see it. The
+		 * link it describes stops working the moment this fires.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param object $share The share row as it was before deletion.
+		 */
+		do_action( 'wp_draftsforfriends_share_revoked', $share );
 
 		return array(
 			'success' => __( 'Shared draft deleted', 'wp-draftsforfriends' ),
@@ -445,11 +501,39 @@ class WP_DraftsForFriends_Shares {
 	/**
 	 * The URL a friend is given.
 	 *
+	 * `?p=<id>` rather than the permalink, deliberately: the preview only works
+	 * on the query WordPress runs for a bare post id, because that fetches the
+	 * row by ID and hands it to `posts_results` before dropping it for being
+	 * unpublished, which is the moment the preview exists to catch. A permalink
+	 * looks the post up by slug among the *public* statuses, so an unpublished
+	 * post is never in the result set at all.
+	 *
+	 * A site that filters this into a shape of its own **must** filter
+	 * `wp_draftsforfriends_requested_hash` to match, or the link will carry a
+	 * hash the plugin cannot find and the friend will get a 404. The two are one
+	 * contract: this writes the URL, that reads it back.
+	 *
+	 * @since 2.0.0
+	 *
 	 * @param object $share Share row.
 	 * @return string
 	 */
 	public static function url( $share ) {
-		return home_url( '/?p=' . (int) $share->post_id . '&draftsforfriends=' . rawurlencode( $share->hash ) );
+		$url = home_url( '/?p=' . (int) $share->post_id . '&' . self::QUERY_VAR . '=' . rawurlencode( $share->hash ) );
+
+		/**
+		 * Filters the URL a friend is given for a shared draft.
+		 *
+		 * Pairs with `wp_draftsforfriends_requested_hash`. Changing the shape of
+		 * the link without teaching the plugin to read the new shape back leaves
+		 * the friend with a 404.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param string $url   The share URL.
+		 * @param object $share The share row it was built from.
+		 */
+		return (string) apply_filters( 'wp_draftsforfriends_share_url', $url, $share );
 	}
 
 	/**

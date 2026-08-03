@@ -366,4 +366,104 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 			'shares for a deleted post must not be left behind'
 		);
 	}
+
+	/**
+	 * The two filters are one contract, and honouring both keeps the preview.
+	 *
+	 * This is the reason the pair exists. A site that rewrites the share link
+	 * without teaching the plugin to read the new shape back hands its friends a
+	 * 404, and nothing in the admin screens looks wrong -- the link is generated,
+	 * stored and displayed exactly as before. So the test that matters is not
+	 * that either filter runs, but that using both together still ends with the
+	 * draft on screen.
+	 */
+	public function test_a_rewritten_link_still_previews_when_the_hash_is_read_back() {
+		$hash = 'HASHLIVE0000000000000000000000AA';
+
+		// A site that moves the hash into a path segment of its own.
+		add_filter(
+			'wp_draftsforfriends_share_url',
+			static function ( $url, $share ) {
+				return home_url( '/secret/' . $share->hash . '/' );
+			},
+			10,
+			2
+		);
+
+		add_filter(
+			'wp_draftsforfriends_requested_hash',
+			static function ( $found ) {
+				if ( '' !== $found ) {
+					return $found;
+				}
+
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Mirrors the plugin's own read: the hash is the credential and nothing here writes.
+				$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+
+				return preg_match( '#/secret/([A-Za-z0-9]+)/#', $path, $m ) ? $m[1] : '';
+			}
+		);
+
+		$was                    = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : null;
+		$_SERVER['REQUEST_URI'] = '/secret/' . $hash . '/';
+
+		// No query argument at all: everything the plugin knows comes from the
+		// filter reading the path.
+		$posts = $this->visit( $this->draft_id );
+
+		if ( null === $was ) {
+			unset( $_SERVER['REQUEST_URI'] );
+		} else {
+			$_SERVER['REQUEST_URI'] = $was;
+		}
+
+		$this->assertCount( 1, $posts, 'A link in the site\'s own shape still previews, because the hash is read back.' );
+		$this->assertSame( $this->draft_id, $posts[0]->ID, 'And it is the post the hash unlocks.' );
+	}
+
+	/**
+	 * Rewriting the link without reading it back is the failure the pair warns of.
+	 *
+	 * Pinned so the docblock's claim is checked rather than asserted: with only
+	 * half the contract honoured the friend gets nothing, which is the 404.
+	 */
+	public function test_a_rewritten_link_without_the_companion_filter_previews_nothing() {
+		add_filter(
+			'wp_draftsforfriends_share_url',
+			static function ( $url, $share ) {
+				return home_url( '/secret/' . $share->hash . '/' );
+			},
+			10,
+			2
+		);
+
+		$was                    = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : null;
+		$_SERVER['REQUEST_URI'] = '/secret/HASHLIVE0000000000000000000000AA/';
+
+		$posts = $this->visit( $this->draft_id );
+
+		if ( null === $was ) {
+			unset( $_SERVER['REQUEST_URI'] );
+		} else {
+			$_SERVER['REQUEST_URI'] = $was;
+		}
+
+		$this->assertCount( 0, $posts, 'Half the contract is no contract: the draft stays hidden.' );
+	}
+
+	/**
+	 * A filter cannot smuggle markup in as the hash.
+	 */
+	public function test_the_requested_hash_filter_is_still_sanitised() {
+		add_filter(
+			'wp_draftsforfriends_requested_hash',
+			static function () {
+				return "<script>alert(1)</script>";
+			}
+		);
+
+		$posts = $this->visit( $this->draft_id );
+
+		$this->assertCount( 0, $posts, 'A hash that unlocks nothing unlocks nothing, however it arrived.' );
+	}
 }

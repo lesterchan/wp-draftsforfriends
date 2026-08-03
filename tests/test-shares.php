@@ -506,4 +506,139 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ), 'A share whose post has gone is not returned.' );
 	}
+
+	/**
+	 * Creating a share fires its action, with the stored row.
+	 */
+	public function test_creating_a_share_fires_the_action() {
+		wp_set_current_user( $this->author_id );
+
+		$seen = array();
+		add_action(
+			'wp_draftsforfriends_share_created',
+			static function ( $share, $post ) use ( &$seen ) {
+				$seen[] = array( $share, $post );
+			},
+			10,
+			2
+		);
+
+		$created = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+
+		$this->assertCount( 1, $seen, 'The action fires once for one share.' );
+		$this->assertSame( $created->id, $seen[0][0]->id, 'It is handed the share that was stored, not the request.' );
+		$this->assertSame( $this->draft_id, (int) $seen[0][1]->ID, 'And the post the share is for.' );
+	}
+
+	/**
+	 * A refused create fires nothing.
+	 */
+	public function test_a_refused_create_fires_no_action() {
+		wp_set_current_user( $this->author_id );
+
+		$fired = 0;
+		add_action(
+			'wp_draftsforfriends_share_created',
+			static function () use ( &$fired ) {
+				++$fired;
+			}
+		);
+
+		$result = WP_DraftsForFriends_Shares::create( 0, 1, 'h' );
+
+		$this->assertArrayHasKey( 'error', $result, 'Fixture sanity: the create was refused.' );
+		$this->assertSame( 0, $fired, 'Nothing happened, so nothing is announced.' );
+	}
+
+	/**
+	 * Extending fires its action with both ends of the move.
+	 */
+	public function test_extending_a_share_fires_the_action() {
+		wp_set_current_user( $this->author_id );
+
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+		$was   = $share->date_expired;
+
+		$seen = array();
+		add_action(
+			'wp_draftsforfriends_share_extended',
+			static function ( $extended, $previous ) use ( &$seen ) {
+				$seen[] = array( $extended, $previous );
+			},
+			10,
+			2
+		);
+
+		WP_DraftsForFriends_Shares::extend( $share->id, 1, 'h' );
+
+		$this->assertCount( 1, $seen, 'The action fires once.' );
+		$this->assertSame( $was, $seen[0][1], 'The previous expiry is the one the share carried before.' );
+		$this->assertNotSame( $was, $seen[0][0]->date_expired, 'And the share it is handed carries the new one.' );
+	}
+
+	/**
+	 * Revoking fires its action, and is handed the row that has just gone.
+	 */
+	public function test_revoking_a_share_fires_the_action() {
+		wp_set_current_user( $this->author_id );
+
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+
+		$seen = array();
+		add_action(
+			'wp_draftsforfriends_share_revoked',
+			static function ( $revoked ) use ( &$seen ) {
+				$seen[] = $revoked;
+			}
+		);
+
+		WP_DraftsForFriends_Shares::delete( $share->id );
+
+		$this->assertCount( 1, $seen, 'The action fires once.' );
+		$this->assertSame( $share->id, $seen[0]->id, 'It is handed the share that was revoked.' );
+		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ), 'Which is gone by the time anybody looks.' );
+	}
+
+	/**
+	 * The URL is filterable.
+	 */
+	public function test_the_share_url_is_filterable() {
+		wp_set_current_user( $this->author_id );
+
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+
+		add_filter(
+			'wp_draftsforfriends_share_url',
+			static function ( $url, $filtered ) {
+				return home_url( '/secret/' . $filtered->hash . '/' );
+			},
+			10,
+			2
+		);
+
+		$this->assertSame(
+			home_url( '/secret/' . $share->hash . '/' ),
+			WP_DraftsForFriends_Shares::url( $share ),
+			'A site can put the share link in a shape of its own.'
+		);
+	}
+
+	/**
+	 * The query argument is named in one place.
+	 *
+	 * url() writes it and WP_DraftsForFriends_Preview reads it back; before the
+	 * constant they held the string separately, so the link a friend was given
+	 * and the check that lets them read it agreed only by coincidence.
+	 */
+	public function test_the_query_argument_is_named_once() {
+		wp_set_current_user( $this->author_id );
+
+		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
+
+		$this->assertStringContainsString(
+			WP_DraftsForFriends_Shares::QUERY_VAR . '=' . $share->hash,
+			WP_DraftsForFriends_Shares::url( $share ),
+			'The URL carries the hash under the shared constant.'
+		);
+	}
 }

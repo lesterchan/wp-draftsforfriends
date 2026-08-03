@@ -101,16 +101,41 @@ class WP_DraftsForFriends_Preview {
 	/**
 	 * The hash from the request, if there is one.
 	 *
+	 * The other half of the contract `WP_DraftsForFriends_Shares::url()` opens:
+	 * that writes the link, this reads it back. Both name the query argument
+	 * through one constant so the default shape is defined in a single place,
+	 * and both are filterable so a site can move to a shape of its own -- but
+	 * only as a pair. A rewritten URL whose hash this cannot find is a 404 for
+	 * the friend, and nothing in the admin screens would look wrong.
+	 *
+	 * Whatever a filter returns is sanitised here rather than trusted: this
+	 * value is the credential the preview is gated on.
+	 *
+	 * @since 2.0.0
+	 *
 	 * @return string
 	 */
 	private function requested_hash() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A read-only check on a link handed to someone who is not logged in; there is no form to carry a nonce and the hash is itself the credential.
-		if ( empty( $_GET['draftsforfriends'] ) ) {
-			return '';
-		}
+		$key = WP_DraftsForFriends_Shares::QUERY_VAR;
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- As above: the hash in the URL is the credential and nothing here writes.
-		return sanitize_text_field( wp_unslash( $_GET['draftsforfriends'] ) );
+		// Sanitised at the point of access rather than after the filter, so the
+		// superglobal is never held raw in a variable.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A read-only check on a link handed to someone who is not logged in; there is no form to carry a nonce and the hash is itself the credential.
+		$raw = empty( $_GET[ $key ] ) ? '' : sanitize_text_field( wp_unslash( $_GET[ $key ] ) );
+
+		/**
+		 * Filters the hash the plugin believes this request is presenting.
+		 *
+		 * Pairs with `wp_draftsforfriends_share_url`. A site that rewrites the
+		 * share link into a shape of its own reads the hash back out here.
+		 *
+		 * @since 2.0.0
+		 *
+		 * @param string $raw The hash as found in the request, or '' if absent.
+		 */
+		$raw = apply_filters( 'wp_draftsforfriends_requested_hash', $raw );
+
+		return is_string( $raw ) ? sanitize_text_field( $raw ) : '';
 	}
 
 	/**
