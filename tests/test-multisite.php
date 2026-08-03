@@ -61,7 +61,7 @@ class WP_DraftsForFriends_Multisite_Test extends WP_DraftsForFriends_TestCase {
 		global $wpdb;
 
 		$this->assertContains( 'draftsforfriends', $wpdb->tables, '$wpdb->tables[] is what re-prefixes the name across switch_to_blog()' );
-		$this->assertArrayHasKey( 'draftsforfriends', $wpdb->tables( 'blog' ) );
+		$this->assertArrayHasKey( 'draftsforfriends', $wpdb->tables( 'blog' ), 'The table is registered blog-scoped, so each site gets its own.' );
 	}
 
 	public function test_network_activation_creates_the_table_on_every_site() {

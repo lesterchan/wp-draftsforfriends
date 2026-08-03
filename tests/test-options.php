@@ -51,7 +51,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertSame( 4, WP_DraftsForFriends_Options::get( 'expires' ) );
 		$this->assertSame( 'd', WP_DraftsForFriends_Options::get( 'measure' ) );
-		$this->assertNull( WP_DraftsForFriends_Options::get( 'no_such_key' ) );
+		$this->assertNull( WP_DraftsForFriends_Options::get( 'no_such_key' ), 'An unknown key reads back null rather than raising a notice.' );
 	}
 
 	public function test_get_versions_reports_empty_strings_before_anything_is_written() {

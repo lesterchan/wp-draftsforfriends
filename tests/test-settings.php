@@ -291,7 +291,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 
 		$links = WP_DraftsForFriends_Settings::action_links( array( '<a href="#">Deactivate</a>' ) );
 
-		$this->assertCount( 2, $links );
+		$this->assertCount( 2, $links, 'The Settings link is added to the link passed in, not instead of it.' );
 		$this->assertStringContainsString( 'edit.php?page=' . WP_DraftsForFriends_Admin::PAGE, $links[0], 'the link does not point at the plugin page under Posts' );
 		$this->assertStringContainsString( 'tab=settings', $links[0], 'the link does not open the Settings tab' );
 	}

@@ -27,7 +27,7 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 		$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ) );
 
 		foreach ( array( 'id', 'post_id', 'user_id', 'hash', 'date_created', 'date_extended', 'date_expired' ) as $column ) {
-			$this->assertContains( $column, $columns );
+			$this->assertContains( $column, $columns, $column . ' is missing from the table schema.' );
 		}
 	}
 
@@ -71,10 +71,11 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 		$source = $this->source_without_comments( 'includes/class-wp-draftsforfriends-install.php' );
 
 		$this->assertStringNotContainsString( 'wp_get_sites', $source );
-		$this->assertMatchesRegularExpression( "/'number'\s*=>\s*0/", $source );
+		$this->assertMatchesRegularExpression( "/'number'\s*=>\s*0/", $source, 'Activation lifts the site query cap, or a network past the default is half-activated.' );
 		$this->assertMatchesRegularExpression(
 			'/foreach\s*\(.*?restore_current_blog\(\s*\);\s*\}/s',
-			$source
+			$source,
+			'Activation restores the blog inside its loop, not once after it.'
 		);
 	}
 

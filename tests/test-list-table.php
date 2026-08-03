@@ -213,7 +213,7 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$table->prepare_items();
 
 		$this->assertSame( 2, $table->get_pagination_arg( 'total_items' ) );
-		$this->assertCount( 2, $table->items );
+		$this->assertCount( 2, $table->items, 'The item count agrees with the number of rows the list renders.' );
 	}
 
 	/**

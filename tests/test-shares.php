@@ -98,8 +98,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$result = WP_DraftsForFriends_Shares::create( $this->draft_id, 3, 'h' );
 
-		$this->assertArrayHasKey( 'success', $result );
-		$this->assertNotEmpty( $result['shared'] );
+		$this->assertArrayHasKey( 'success', $result, 'Creating a share reports success rather than an error.' );
+		$this->assertNotEmpty( $result['shared'], 'Creating a share hands back the row it made.' );
 
 		$share = $result['shared'];
 
@@ -109,8 +109,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$delta = strtotime( $share->date_expired . ' UTC' ) - time();
 
-		$this->assertGreaterThan( 3 * HOUR_IN_SECONDS - 60, $delta );
-		$this->assertLessThanOrEqual( 3 * HOUR_IN_SECONDS + 5, $delta );
+		$this->assertGreaterThan( 3 * HOUR_IN_SECONDS - 60, $delta, 'The expiry is not shorter than the three hours asked for.' );
+		$this->assertLessThanOrEqual( 3 * HOUR_IN_SECONDS + 5, $delta, 'The expiry is not longer than the three hours asked for, allowing for a slow run.' );
 	}
 
 	/**
@@ -156,12 +156,12 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$result = WP_DraftsForFriends_Shares::extend( $share->id, 1, 'h' );
 
-		$this->assertArrayHasKey( 'success', $result );
+		$this->assertArrayHasKey( 'success', $result, 'Extending an unexpired share reports success.' );
 
 		$now = strtotime( $result['shared']->date_expired . ' UTC' );
 
 		$this->assertEqualsWithDelta( HOUR_IN_SECONDS, $now - $was, 5 );
-		$this->assertNotEmpty( $result['shared']->date_extended );
+		$this->assertNotEmpty( $result['shared']->date_extended, 'Extending stamps the date it was extended.' );
 	}
 
 	/**
@@ -185,12 +185,12 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$result = WP_DraftsForFriends_Shares::extend( $share->id, 1, 'h' );
 
-		$this->assertArrayHasKey( 'success', $result );
+		$this->assertArrayHasKey( 'success', $result, 'Extending an expired share reports success.' );
 
 		$delta = strtotime( $result['shared']->date_expired . ' UTC' ) - time();
 
 		$this->assertGreaterThan( HOUR_IN_SECONDS - 60, $delta, 'an expired share must extend from now, not from its stale expiry' );
-		$this->assertLessThanOrEqual( HOUR_IN_SECONDS + 5, $delta );
+		$this->assertLessThanOrEqual( HOUR_IN_SECONDS + 5, $delta, 'An expired share restarts from now rather than from its old expiry.' );
 	}
 
 	/**
@@ -201,13 +201,13 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 
-		$this->assertTrue( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
+		$this->assertTrue( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ), 'The hash unlocks the draft before the share is deleted.' );
 
 		$result = WP_DraftsForFriends_Shares::delete( $share->id );
 
-		$this->assertArrayHasKey( 'success', $result );
-		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ) );
-		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
+		$this->assertArrayHasKey( 'success', $result, 'Deleting the share reports success.' );
+		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ), 'The deleted share is gone from the table.' );
+		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ), 'The hash no longer unlocks the draft once the share is deleted.' );
 	}
 
 	/**
@@ -223,14 +223,14 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		wp_set_current_user( $this->author_id );
 
-		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ) );
-		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::extend( $share->id, 5, 'd' ) );
-		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::delete( $share->id ) );
+		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ), 'A share belonging to another user is not readable.' );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::extend( $share->id, 5, 'd' ), 'Extending a share belonging to another user is refused.' );
+		$this->assertArrayHasKey( 'error', WP_DraftsForFriends_Shares::delete( $share->id ), 'Deleting a share belonging to another user is refused.' );
 
 		// And the share is still intact.
 		wp_set_current_user( $this->editor_id );
 
-		$this->assertNotNull( WP_DraftsForFriends_Shares::get( $share->id ) );
+		$this->assertNotNull( WP_DraftsForFriends_Shares::get( $share->id ), 'The share still exists, so the refusals above did not quietly delete it.' );
 	}
 
 	/**
@@ -244,12 +244,12 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 		WP_DraftsForFriends_Shares::create( $this->editor_draft_id, 1, 'h' );
 
 		$this->assertSame( 2, WP_DraftsForFriends_Shares::count(), 'an editor sees every share' );
-		$this->assertCount( 2, WP_DraftsForFriends_Shares::query() );
+		$this->assertCount( 2, WP_DraftsForFriends_Shares::query(), 'An editor sees every share.' );
 
 		wp_set_current_user( $this->author_id );
 
 		$this->assertSame( 1, WP_DraftsForFriends_Shares::count(), 'an author sees only their own' );
-		$this->assertCount( 1, WP_DraftsForFriends_Shares::query() );
+		$this->assertCount( 1, WP_DraftsForFriends_Shares::query(), 'An author sees only their own.' );
 	}
 
 	/**
@@ -270,14 +270,14 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 			array( '%d' )
 		);
 
-		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ) );
+		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, $share->hash ), 'An expired hash no longer unlocks the draft.' );
 	}
 
 	/**
 	 * An empty hash never unlocks anything.
 	 */
 	public function test_hash_unlocks_rejects_empty() {
-		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, '' ) );
+		$this->assertFalse( WP_DraftsForFriends_Shares::hash_unlocks( $this->draft_id, '' ), 'An empty hash never unlocks anything.' );
 	}
 
 	/**
@@ -289,8 +289,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		// If either of these reached the SQL the query would error and return no
 		// rows, so getting the row back is the assertion.
-		$this->assertCount( 1, WP_DraftsForFriends_Shares::query( 'id; DROP TABLE wp_posts', 'asc' ) );
-		$this->assertCount( 1, WP_DraftsForFriends_Shares::query( 'date_created', "asc'--" ) );
+		$this->assertCount( 1, WP_DraftsForFriends_Shares::query( 'id; DROP TABLE wp_posts', 'asc' ), 'An injected orderby is rejected and the default used, so the query still answers.' );
+		$this->assertCount( 1, WP_DraftsForFriends_Shares::query( 'date_created', "asc'--" ), 'An injected order direction is rejected and the default used.' );
 
 		$this->assertNotEmpty( get_post( $this->draft_id ), 'wp_posts survived' );
 	}
@@ -355,7 +355,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		foreach ( WP_DraftsForFriends_Shares::shareable_posts() as $group ) {
 			foreach ( $group['posts'] as $post ) {
-				$this->assertNotSame( $published, $post->ID );
+				$this->assertNotSame( $published, $post->ID, 'A published post is offered as shareable.' );
 			}
 		}
 	}
@@ -484,8 +484,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 		$page_one = wp_list_pluck( WP_DraftsForFriends_Shares::query( 'id', 'asc', 0, 2 ), 'id' );
 		$page_two = wp_list_pluck( WP_DraftsForFriends_Shares::query( 'id', 'asc', 2, 2 ), 'id' );
 
-		$this->assertCount( 2, $page_one );
-		$this->assertCount( 2, $page_two );
+		$this->assertCount( 2, $page_one, 'The first page holds its two rows.' );
+		$this->assertCount( 2, $page_two, 'The second page holds the other two.' );
 		$this->assertSame( array(), array_intersect( $page_one, $page_two ) );
 	}
 
@@ -502,6 +502,6 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 		$wpdb->delete( $wpdb->posts, array( 'ID' => $this->draft_id ), array( '%d' ) );
 		clean_post_cache( $this->draft_id );
 
-		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ) );
+		$this->assertNull( WP_DraftsForFriends_Shares::get( $share->id ), 'A share whose post has gone is not returned.' );
 	}
 }

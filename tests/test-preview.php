@@ -144,7 +144,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	public function test_valid_hash_returns_the_draft() {
 		$posts = $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' );
 
-		$this->assertCount( 1, $posts );
+		$this->assertCount( 1, $posts, 'A valid hash returns the draft it unlocks.' );
 		$this->assertSame( $this->draft_id, $posts[0]->ID );
 		$this->assertStringContainsString( 'SECRET-DRAFT-BODY', $posts[0]->post_content );
 	}
@@ -166,7 +166,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	 * @param string|null $hash Hash to present.
 	 */
 	public function test_denied( $hash ) {
-		$this->assertCount( 0, $this->visit( $this->draft_id, $hash ) );
+		$this->assertCount( 0, $this->visit( $this->draft_id, $hash ), 'A denied visitor is shown nothing.' );
 	}
 
 	/**
@@ -193,7 +193,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	 * in the same request that legitimately returned nothing got that post back.
 	 */
 	public function test_authorised_preview_does_not_leak_into_the_next_query() {
-		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ), 'The authorised preview still returns its own draft.' );
 
 		$this->assertCount( 0, $this->visit( $this->draft_id, null ), 'a request with no hash was served the previous query\'s post' );
 	}
@@ -204,7 +204,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	public function test_authorised_preview_does_not_leak_to_a_wrong_hash() {
 		$this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' );
 
-		$this->assertCount( 0, $this->visit( $this->draft_id, 'NOPENOPENOPENOPENOPENOPENOPENOPE' ) );
+		$this->assertCount( 0, $this->visit( $this->draft_id, 'NOPENOPENOPENOPENOPENOPENOPENOPE' ), 'A wrong hash returns nothing, even after an authorised preview in the same request.' );
 	}
 
 	/**
@@ -213,7 +213,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	public function test_authorised_preview_does_not_leak_into_another_draft() {
 		$this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' );
 
-		$this->assertCount( 0, $this->visit( $this->other_draft_id, null ) );
+		$this->assertCount( 0, $this->visit( $this->other_draft_id, null ), 'Another draft stays hidden after an authorised preview.' );
 	}
 
 	/**
@@ -227,7 +227,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 
 		wp_reset_postdata();
 
-		$this->assertCount( 0, $posts );
+		$this->assertCount( 0, $posts, 'An unrelated empty search stays empty after an authorised preview.' );
 	}
 
 	/**
@@ -236,14 +236,14 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	public function test_published_posts_are_untouched() {
 		$posts = $this->visit( $this->published_id, null );
 
-		$this->assertCount( 1, $posts );
+		$this->assertCount( 1, $posts, 'A published post is returned as it always was.' );
 		$this->assertSame(
 			get_post_field( 'comment_status', $this->published_id ),
 			$posts[0]->comment_status,
 			'the plugin changed comment_status on a published post'
 		);
 
-		$this->assertCount( 1, $this->visit( $this->published_id, 'HASHLIVE0000000000000000000000AA' ) );
+		$this->assertCount( 1, $this->visit( $this->published_id, 'HASHLIVE0000000000000000000000AA' ), 'A published post is unaffected by a share hash.' );
 	}
 
 	/**
@@ -259,7 +259,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->seed( $pending, 'HASHPENDING0000000000000000000AA', HOUR_IN_SECONDS );
 
-		$this->assertCount( 1, $this->visit( $pending, 'HASHPENDING0000000000000000000AA' ) );
+		$this->assertCount( 1, $this->visit( $pending, 'HASHPENDING0000000000000000000AA' ), 'A pending post is shareable too, not only a draft.' );
 	}
 
 	/**
@@ -270,11 +270,11 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	 * nothing.
 	 */
 	public function test_trashing_the_post_revokes_the_link() {
-		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ), 'The link works before the post is trashed.' );
 
 		wp_trash_post( $this->draft_id );
 
-		$this->assertCount( 0, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+		$this->assertCount( 0, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ), 'Trashing the post revokes the link.' );
 	}
 
 	/**
@@ -282,7 +282,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	 */
 	public function test_untrashing_the_post_restores_the_link() {
 		wp_trash_post( $this->draft_id );
-		$this->assertCount( 0, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+		$this->assertCount( 0, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ), 'The link stays dead while the post is trashed.' );
 
 		wp_untrash_post( $this->draft_id );
 		wp_update_post(
@@ -292,7 +292,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 			)
 		);
 
-		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ), 'Untrashing the post restores the link.' );
 	}
 
 	/**
@@ -313,7 +313,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 			)
 		);
 
-		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ) );
+		$this->assertCount( 1, $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' ), 'The share survives a change of post status.' );
 	}
 
 	/**
@@ -344,7 +344,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 		// WordPress serves it as an ordinary published post, so it is still one
 		// result -- but the plugin has not touched it, which the open comment
 		// status shows.
-		$this->assertCount( 1, $posts );
+		$this->assertCount( 1, $posts, 'Publishing the post ends the preview and returns it as an ordinary post.' );
 		$this->assertSame( get_post_field( 'comment_status', $this->draft_id ), $posts[0]->comment_status );
 	}
 
@@ -356,7 +356,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 
 		$before = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) );
 
-		$this->assertGreaterThan( 0, $before );
+		$this->assertGreaterThan( 0, $before, 'The fixture really does have shares, or the deletion below proves nothing.' );
 
 		wp_delete_post( $this->draft_id, true );
 
