@@ -2,7 +2,7 @@
 /**
  * The base class every WP-DraftsForFriends test extends.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

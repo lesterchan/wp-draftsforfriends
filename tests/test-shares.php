@@ -2,7 +2,7 @@
 /**
  * The data layer: expiry arithmetic, the countdown, and capability scoping.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

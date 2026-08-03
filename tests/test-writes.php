@@ -2,7 +2,7 @@
 /**
  * The shared drafts screen's write paths.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

@@ -2,7 +2,7 @@
 /**
  * The shared drafts list table.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

@@ -2,7 +2,7 @@
 /**
  * The table, the schema check and the migration.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

@@ -2,7 +2,7 @@
 /**
  * The two option rows.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

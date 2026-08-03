@@ -2,7 +2,7 @@
 /**
  * The shared drafts screen.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

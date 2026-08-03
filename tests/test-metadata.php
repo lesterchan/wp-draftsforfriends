@@ -11,7 +11,7 @@
  * their own, that the file it cannot include still names the same rows, and
  * that it fires exactly one hook.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

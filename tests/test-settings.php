@@ -2,7 +2,7 @@
 /**
  * The settings screen.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

@@ -5,7 +5,7 @@
  * They skip themselves on a single site run, so bin/test-multisite.sh is the
  * only way they execute.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**

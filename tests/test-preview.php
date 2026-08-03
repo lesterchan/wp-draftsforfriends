@@ -2,7 +2,7 @@
 /**
  * The front-end preview: the plugin's entire public contract.
  *
- * @package wp-draftsforfriends
+ * @package WP-DraftsForFriends
  */
 
 /**
