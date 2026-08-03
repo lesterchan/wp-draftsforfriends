@@ -36,7 +36,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 
 		// It is what do_settings_sections() is keyed on and nothing else. A menu
 		// entry using it would be the second screen §4.2.1 replaced with a tab.
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$this->register_admin_menu();
 
@@ -93,7 +93,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_the_screen_renders_the_stored_values() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		WP_DraftsForFriends_Options::update(
 			array(
@@ -113,7 +113,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_the_screen_is_a_settings_api_form_rather_than_hand_written() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$html = $this->render_settings_page();
 
@@ -136,7 +136,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_every_control_on_the_settings_screen_is_labelled() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$html = $this->render_settings_page();
 
@@ -145,7 +145,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_the_tab_carries_the_active_tab_through_the_save() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$html = $this->render_settings_page();
 
@@ -233,7 +233,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_saving_the_settings_tab_leaves_the_shared_drafts_tab_untouched() {
-		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$user_id = $this->create_admin();
 
 		$share = $this->make_share( $this->author_id, $this->draft_id );
 
@@ -287,7 +287,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_the_plugins_screen_gains_a_settings_link_for_an_administrator() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$links = WP_DraftsForFriends_Settings::action_links( array( '<a href="#">Deactivate</a>' ) );
 
@@ -305,7 +305,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_a_round_trip_through_the_screen_stores_a_clean_row() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		WP_DraftsForFriends_Settings::register_settings();
 

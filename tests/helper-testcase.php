@@ -58,6 +58,27 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 	protected $admin_page_notices = array();
 
 	/**
+	 * Creates a user who may actually reach the plugin's screens.
+	 *
+	 * Neither capability the plugin gates on is remapped under multisite:
+	 * sharing takes `publish_posts` and the settings screen takes
+	 * `manage_options`, and core's map_meta_cap() leaves both alone. So there is
+	 * no grant_super_admin() here — an administrator on a network holds both
+	 * already, and granting would make the fixture stop representing the author
+	 * whose drafts these are.
+	 *
+	 * Every administrator the suite creates goes through this, so the network
+	 * question is answered in one place rather than at each call site. Tests
+	 * that assert the *unprivileged* path set their own subscriber or editor
+	 * explicitly and must not be routed through here.
+	 *
+	 * @return int The new user's ID.
+	 */
+	protected function create_admin() {
+		return self::factory()->user->create( array( 'role' => 'administrator' ) );
+	}
+
+	/**
 	 * Seed the fixtures.
 	 */
 	public function set_up() {

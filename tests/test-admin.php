@@ -239,7 +239,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 	public function test_the_menu_is_one_page_under_posts_and_nothing_top_level() {
 		global $menu, $submenu;
 
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$this->register_admin_menu();
 
@@ -279,7 +279,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 	public function test_the_sidebar_entry_is_the_plugins_name_and_the_heading_is_not() {
 		global $submenu;
 
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$this->register_admin_menu();
 
@@ -393,7 +393,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 	public function test_the_page_is_registered_with_the_lower_of_the_two_capabilities() {
 		global $submenu;
 
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$this->register_admin_menu();
 
@@ -442,7 +442,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_an_administrator_sees_both_tabs() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( $this->create_admin() );
 
 		$html = $this->render_admin_page();
 
