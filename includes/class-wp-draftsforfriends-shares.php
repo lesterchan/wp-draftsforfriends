@@ -501,12 +501,12 @@ class WP_DraftsForFriends_Shares {
 	/**
 	 * The URL a friend is given.
 	 *
-	 * `?p=<id>` rather than the permalink, deliberately: the preview only works
-	 * on the query WordPress runs for a bare post id, because that fetches the
-	 * row by ID and hands it to `posts_results` before dropping it for being
-	 * unpublished, which is the moment the preview exists to catch. A permalink
-	 * looks the post up by slug among the *public* statuses, so an unpublished
-	 * post is never in the result set at all.
+	 * The link is `?p=<id>` rather than the permalink, deliberately. The preview
+	 * only works on the query WordPress runs for a bare post id, because that
+	 * fetches the row by ID and hands it to `posts_results` before dropping it
+	 * for being unpublished, which is the moment the preview exists to catch. A
+	 * permalink looks the post up by slug among the *public* statuses, so an
+	 * unpublished post is never in the result set at all.
 	 *
 	 * A site that filters this into a shape of its own **must** filter
 	 * `wp_draftsforfriends_requested_hash` to match, or the link will carry a

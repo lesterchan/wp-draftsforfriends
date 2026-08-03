@@ -208,13 +208,19 @@ class WP_DraftsForFriends_Metadata_Test extends Plugin_Metadata_TestCase {
 	}
 
 	/**
-	 * One hook, deliberately.
+	 * The hook surface, asserted as a set.
 	 *
 	 * Not merely "every hook is prefixed" - the set itself is asserted, because
-	 * the plugin previously fired none of its own and every addition to that
-	 * list is a public API this collection then has to keep.
+	 * the plugin fired none of its own before 2.0.0 and every addition is a
+	 * public API this collection then has to keep. That is the point: this test
+	 * is meant to fail when a hook is added, so that adding one is a decision
+	 * rather than a side effect. It did exactly that when the five below
+	 * landed.
+	 *
+	 * Sorted rather than asserted in source order, so renaming a file cannot
+	 * fail a test about the API.
 	 */
-	public function test_the_plugin_fires_exactly_one_hook() {
+	public function test_the_plugin_fires_exactly_the_hooks_it_documents() {
 		$fired = array();
 
 		foreach ( (array) glob( $this->metadata_root() . '/includes/*.php' ) as $file ) {
@@ -227,10 +233,22 @@ class WP_DraftsForFriends_Metadata_Test extends Plugin_Metadata_TestCase {
 			$fired = array_merge( $fired, $matches[1] );
 		}
 
+		$expected = array(
+			'wp_draftsforfriends_capability',
+			'wp_draftsforfriends_requested_hash',
+			'wp_draftsforfriends_share_created',
+			'wp_draftsforfriends_share_extended',
+			'wp_draftsforfriends_share_revoked',
+			'wp_draftsforfriends_share_url',
+		);
+
+		$fired = array_values( array_unique( $fired ) );
+		sort( $fired );
+
 		$this->assertSame(
-			array( 'wp_draftsforfriends_capability' ),
-			array_values( array_unique( $fired ) ),
-			'The set of hooks this plugin fires has changed.'
+			$expected,
+			$fired,
+			'The set of hooks this plugin fires has changed. Every one is public API: add it to the README and to this list, or take it out.'
 		);
 	}
 

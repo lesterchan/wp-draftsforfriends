@@ -626,7 +626,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 	/**
 	 * The query argument is named in one place.
 	 *
-	 * url() writes it and WP_DraftsForFriends_Preview reads it back; before the
+	 * Both url() and WP_DraftsForFriends_Preview depend on it; before the
 	 * constant they held the string separately, so the link a friend was given
 	 * and the check that lets them read it agreed only by coincidence.
 	 */

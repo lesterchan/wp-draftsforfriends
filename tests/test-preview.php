@@ -458,7 +458,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 		add_filter(
 			'wp_draftsforfriends_requested_hash',
 			static function () {
-				return "<script>alert(1)</script>";
+				return '<script>alert(1)</script>';
 			}
 		);
 
