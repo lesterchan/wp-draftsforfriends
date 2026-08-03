@@ -54,7 +54,7 @@ class WP_DraftsForFriends_Multisite_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertNotSame( $before, $switched, 'the table name did not change with the site' );
 		$this->assertSame( $before, $wpdb->draftsforfriends, 'the table name did not come back' );
-		$this->assertStringContainsString( (string) $other, $switched );
+		$this->assertStringContainsString( (string) $other, $switched, 'The table name follows the site switched to, so one site cannot read another.' );
 	}
 
 	public function test_the_table_is_registered_as_blog_scoped() {

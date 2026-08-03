@@ -16,9 +16,9 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$html = $this->render_admin_page();
 
 		$this->assertSame( array(), $this->admin_page_notices, 'the screen raised PHP diagnostics' );
-		$this->assertStringContainsString( 'Drafts for Friends', $html );
-		$this->assertStringContainsString( 'Currently Shared Drafts', $html );
-		$this->assertStringContainsString( 'wp-list-table', $html );
+		$this->assertStringContainsString( 'Drafts for Friends', $html, 'The screen is titled after the plugin.' );
+		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'The list of live shares is on the screen.' );
+		$this->assertStringContainsString( 'wp-list-table', $html, 'The list is a core list table, so it inherits core styling and behaviour.' );
 		$this->assertStringContainsString( $share->hash, $html, 'the share link is missing' );
 	}
 
@@ -43,14 +43,14 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertArrayNotHasKey( $page, (array) $wp_settings_sections, 'the shared drafts screen registered a settings section' );
 		$this->assertArrayNotHasKey( $page, (array) $wp_settings_fields, 'the shared drafts screen registered a settings field' );
 
-		$this->assertStringContainsString( 'Share a Draft', $html );
-		$this->assertStringContainsString( '<label for="draftsforfriends-post-id">Choose a draft:</label>', $html );
-		$this->assertStringContainsString( '<label for="draftsforfriends-expires">Share it for:</label>', $html );
-		$this->assertStringContainsString( 'name="post_id"', $html );
-		$this->assertStringContainsString( 'name="expires"', $html );
-		$this->assertStringContainsString( 'name="measure"', $html );
-		$this->assertStringContainsString( '<optgroup label="Drafts:">', $html );
-		$this->assertStringContainsString( 'value="' . $this->draft_id . '"', $html );
+		$this->assertStringContainsString( 'Share a Draft', $html, 'The add form is headed.' );
+		$this->assertStringContainsString( '<label for="draftsforfriends-post-id">Choose a draft:</label>', $html, 'The post select is labelled, and the label points at the control.' );
+		$this->assertStringContainsString( '<label for="draftsforfriends-expires">Share it for:</label>', $html, 'The duration field is labelled, and the label points at the control.' );
+		$this->assertStringContainsString( 'name="post_id"', $html, 'The form posts the post it is sharing.' );
+		$this->assertStringContainsString( 'name="expires"', $html, 'The form posts the duration.' );
+		$this->assertStringContainsString( 'name="measure"', $html, 'The form posts the unit the duration is in.' );
+		$this->assertStringContainsString( '<optgroup label="Drafts:">', $html, 'Drafts are grouped, so a long list stays readable.' );
+		$this->assertStringContainsString( 'value="' . $this->draft_id . '"', $html, 'The draft that exists is offered in the select.' );
 	}
 
 	public function test_the_add_form_carries_its_own_nonce() {
@@ -58,7 +58,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_admin_page();
 
-		$this->assertStringContainsString( 'id="draftsforfriends-add"', $html );
+		$this->assertStringContainsString( 'id="draftsforfriends-add"', $html, 'The add form is present, carrying the nonce field with it.' );
 		$this->assertStringContainsString( 'name="_wpnonce"', $html, 'the add form posts without a nonce field' );
 		$this->assertStringContainsString( 'name="_wp_http_referer"', $html, 'wp_nonce_field() should emit the referer field too' );
 		$this->assertStringContainsString( 'name="draftsforfriends_add"', $html, 'the submit button does not identify the form' );
@@ -76,7 +76,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_admin_page();
 
-		$this->assertStringContainsString( 'id="draftsforfriends-expires" type="number" min="1" max="9999" step="1" value="5"', $html );
+		$this->assertStringContainsString( 'id="draftsforfriends-expires" type="number" min="1" max="9999" step="1" value="5"', $html, 'The number field starts on the configured duration, not on a hardcoded one.' );
 		$this->assert_option_selected( 'd', $html, 'the configured unit is not preselected' );
 	}
 
@@ -85,8 +85,8 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_admin_page();
 
-		$this->assertStringNotContainsString( 'id="draftsforfriends-add"', $html );
-		$this->assertStringNotContainsString( 'Share a Draft', $html );
+		$this->assertStringNotContainsString( 'id="draftsforfriends-add"', $html, 'With nothing shareable the form is not rendered at all.' );
+		$this->assertStringNotContainsString( 'Share a Draft', $html, 'Its heading goes with it, rather than standing over nothing.' );
 		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'the list should still render' );
 	}
 
@@ -125,10 +125,10 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_admin_page();
 
-		$this->assertStringNotContainsString( '<?php', $html );
+		$this->assertStringNotContainsString( '<?php', $html, 'No PHP tag reached the page, which would mean a template was echoed unparsed.' );
 		$this->assertStringNotContainsString( 'translators:', $html, 'a translators comment reached HTML context' );
 		$this->assertStringNotContainsString( '&amp;amp;', $html, 'something was escaped twice' );
-		$this->assertStringNotContainsString( 'Fatal error', $html );
+		$this->assertStringNotContainsString( 'Fatal error', $html, 'No PHP diagnostic reached the page.' );
 	}
 
 	public function test_the_post_title_is_escaped_everywhere_it_appears() {
@@ -137,7 +137,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$html = $this->render_admin_page();
 
 		$this->assertStringNotContainsString( 'Draft <b>Title</b>', $html, 'a raw post title reached the page' );
-		$this->assertStringContainsString( 'Draft &lt;b&gt;Title&lt;/b&gt;', $html );
+		$this->assertStringContainsString( 'Draft &lt;b&gt;Title&lt;/b&gt;', $html, 'The stored title is escaped where it is rendered, not merely on the way in.' );
 	}
 
 	public function test_the_list_is_scoped_by_capability() {
@@ -146,7 +146,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_admin_page();
 
-		$this->assertStringContainsString( $author_share->hash, $html );
+		$this->assertStringContainsString( $author_share->hash, $html, 'An author sees their own share.' );
 		$this->assertStringNotContainsString( $editor_share->hash, $html, "the author's screen leaked the editor's share" );
 
 		wp_set_current_user( $this->editor_id );
@@ -154,7 +154,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$html = $this->render_admin_page();
 
 		$this->assertStringContainsString( $author_share->hash, $html, 'an editor should see every share' );
-		$this->assertStringContainsString( $editor_share->hash, $html );
+		$this->assertStringContainsString( $editor_share->hash, $html, 'An editor sees every share, not only their own.' );
 	}
 
 	public function test_the_share_link_points_at_the_post() {
@@ -162,8 +162,8 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_admin_page();
 
-		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html );
-		$this->assertStringContainsString( 'p=' . $this->draft_id, $html );
+		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html, 'The link carries the hash that unlocks the draft.' );
+		$this->assertStringContainsString( 'p=' . $this->draft_id, $html, 'The link carries the post it unlocks.' );
 	}
 
 	/**
@@ -179,8 +179,8 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$html = $this->render_admin_page( $get );
 
 		$this->assertSame( array(), $this->admin_page_notices, 'the screen raised PHP diagnostics' );
-		$this->assertStringContainsString( 'Currently Shared Drafts', $html );
-		$this->assertStringNotContainsStringIgnoringCase( 'database error', $html );
+		$this->assertStringContainsString( 'Currently Shared Drafts', $html, 'The screen still renders with junk in the request rather than dying.' );
+		$this->assertStringNotContainsStringIgnoringCase( 'database error', $html, 'A junk request argument never reaches the query as SQL.' );
 		$this->assertNotEmpty( get_post( $this->draft_id ), 'wp_posts survived' );
 	}
 
@@ -514,7 +514,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertContains( 'shares', $seen, 'the shared drafts screen did not consult the filter' );
 
 		$this->assertSame( 'read', WP_DraftsForFriends_Settings::capability( 'settings' ), 'the settings screen did not consult the filter' );
-		$this->assertContains( 'settings', $seen );
+		$this->assertContains( 'settings', $seen, 'The capability filter is consulted for the settings screen as well as the main one.' );
 	}
 
 	public function test_the_assets_load_only_on_the_plugins_own_screen() {

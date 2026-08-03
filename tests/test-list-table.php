@@ -102,13 +102,13 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$table = $this->table();
 		$table->prepare_items();
 
-		$this->assertSame( 20, $table->get_pagination_arg( 'per_page' ) );
+		$this->assertSame( 20, $table->get_pagination_arg( 'per_page' ), 'The list pages at twenty, which is what the item count below is measured against.' );
 	}
 
 	public function test_the_no_items_message_is_the_plugins_own() {
 		ob_start();
 		$this->table()->no_items();
-		$this->assertSame( 'No shared drafts!', (string) ob_get_clean() );
+		$this->assertSame( 'No shared drafts!', (string) ob_get_clean(), 'The empty state is the plugin wording, not the core default.' );
 	}
 
 	public function test_the_checkbox_column_is_labelled_with_the_post_title() {
@@ -116,8 +116,8 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$html  = $this->table()->column_cb( $share );
 
 		$this->assertStringContainsString( 'name="shares[]"', $html, 'the handler reads shares[]' );
-		$this->assertStringContainsString( 'value="' . (int) $share->id . '"', $html );
-		$this->assertStringContainsString( 'id="cb-select-' . (int) $share->id . '"', $html );
+		$this->assertStringContainsString( 'value="' . (int) $share->id . '"', $html, 'The checkbox carries the share id it acts on.' );
+		$this->assertStringContainsString( 'id="cb-select-' . (int) $share->id . '"', $html, 'The checkbox id matches the label that names it, so the two are associated.' );
 		$this->assertStringContainsString( 'class="screen-reader-text"', $html, 'a bare checkbox tells a screen reader nothing' );
 		$this->assertStringNotContainsString( 'Draft <b>Title</b>', $html, 'the post title reached the label unescaped' );
 	}
@@ -126,8 +126,8 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$share = $this->make_share( $this->author_id, $this->draft_id );
 		$html  = $this->table()->column_link( $share );
 
-		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html );
-		$this->assertStringContainsString( 'draftsforfriends-copy', $html );
+		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html, 'The link column carries the share URL.' );
+		$this->assertStringContainsString( 'draftsforfriends-copy', $html, 'The link column carries the copy button that reads it.' );
 		$this->assertStringContainsString( 'hide-if-no-js', $html, 'the copy button must not appear where the script has not run' );
 		$this->assertStringContainsString( 'data-link=', $html, 'the script reads the URL from a data attribute' );
 	}
@@ -135,12 +135,12 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 	public function test_a_share_that_has_never_been_extended_reads_na() {
 		$share = $this->make_share( $this->author_id, $this->draft_id );
 
-		$this->assertSame( 'N/A', $this->table()->column_date_extended( $share ) );
+		$this->assertSame( 'N/A', $this->table()->column_date_extended( $share ), 'A share never extended reads N/A rather than the epoch.' );
 
 		// The zero datetime a pre-2.0.0 row could hold reads the same way.
 		$share->date_extended = '0000-00-00 00:00:00';
 
-		$this->assertSame( 'N/A', $this->table()->column_date_extended( $share ) );
+		$this->assertSame( 'N/A', $this->table()->column_date_extended( $share ), 'A zeroed extension date reads N/A too, not 1 January 1970.' );
 	}
 
 	public function test_the_dates_are_rendered_in_the_sites_own_timezone() {
@@ -152,15 +152,15 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 
 		$expected = wp_date( 'H:i Y-m-d', (int) mysql2date( 'G', $share->date_created ) );
 
-		$this->assertSame( $expected, $this->table()->column_date_created( $share ) );
+		$this->assertSame( $expected, $this->table()->column_date_created( $share ), 'Dates are rendered in the site timezone, not in UTC.' );
 	}
 
 	public function test_the_default_column_escapes_and_tolerates_a_missing_property() {
 		$share = $this->make_share( $this->author_id, $this->draft_id );
 		$table = $this->table();
 
-		$this->assertSame( '', $table->column_default( $share, 'no_such_column' ) );
-		$this->assertSame( esc_html( $share->hash ), $table->column_default( $share, 'hash' ) );
+		$this->assertSame( '', $table->column_default( $share, 'no_such_column' ), 'A column the row has no property for renders empty rather than warning.' );
+		$this->assertSame( esc_html( $share->hash ), $table->column_default( $share, 'hash' ), 'A column that does exist is escaped on the way out.' );
 	}
 
 	public function test_the_extend_controls_start_on_the_configured_duration() {
@@ -177,9 +177,9 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$this->invoke( $table, 'extra_tablenav', 'top' );
 		$html = (string) ob_get_clean();
 
-		$this->assertStringContainsString( 'name="extend_expires"', $html );
-		$this->assertStringContainsString( 'value="4"', $html );
-		$this->assertStringContainsString( 'name="extend_measure"', $html );
+		$this->assertStringContainsString( 'name="extend_expires"', $html, 'The row offers its own duration field.' );
+		$this->assertStringContainsString( 'value="4"', $html, 'It starts on the configured duration, not on a hardcoded one.' );
+		$this->assertStringContainsString( 'name="extend_measure"', $html, 'The row offers its own unit field.' );
 		$this->assert_option_selected( 'd', $html, 'the configured unit is not preselected' );
 
 		ob_start();
@@ -212,7 +212,7 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$table = $this->table();
 		$table->prepare_items();
 
-		$this->assertSame( 2, $table->get_pagination_arg( 'total_items' ) );
+		$this->assertSame( 2, $table->get_pagination_arg( 'total_items' ), 'The item count is the number of shares, which is what the pager divides.' );
 		$this->assertCount( 2, $table->items, 'The item count agrees with the number of rows the list renders.' );
 	}
 

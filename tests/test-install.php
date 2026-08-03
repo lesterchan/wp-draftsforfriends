@@ -22,7 +22,7 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 
 		$table = $wpdb->prefix . 'draftsforfriends';
 
-		$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) );
+		$this->assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ), 'The table is created with the name the plugin looks for.' );
 
 		$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ) );
 
@@ -61,7 +61,7 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 		WP_DraftsForFriends_Install::create_table();
 		$after = $wpdb->get_var( $wpdb->prepare( 'SHOW CREATE TABLE %i', $wpdb->prefix . 'draftsforfriends' ), 1 );
 
-		$this->assertSame( $before, $after );
+		$this->assertSame( $before, $after, 'Running the schema check twice leaves the table as it was.' );
 	}
 
 	/**
@@ -70,7 +70,7 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 	public function test_activation_site_loop_is_correct() {
 		$source = $this->source_without_comments( 'includes/class-wp-draftsforfriends-install.php' );
 
-		$this->assertStringNotContainsString( 'wp_get_sites', $source );
+		$this->assertStringNotContainsString( 'wp_get_sites', $source, 'The removed wp_get_sites() is not called; it capped a network at 100 sites.' );
 		$this->assertMatchesRegularExpression( "/'number'\s*=>\s*0/", $source, 'Activation lifts the site query cap, or a network past the default is half-activated.' );
 		$this->assertMatchesRegularExpression(
 			'/foreach\s*\(.*?restore_current_blog\(\s*\);\s*\}/s',
@@ -82,7 +82,7 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 	public function test_the_table_name_is_built_from_the_prefix() {
 		global $wpdb;
 
-		$this->assertSame( $wpdb->prefix . 'draftsforfriends', WP_DraftsForFriends_Install::table() );
+		$this->assertSame( $wpdb->prefix . 'draftsforfriends', WP_DraftsForFriends_Install::table(), 'The table name is built from the site prefix, so a network gets one per site.' );
 		$this->assertSame( $wpdb->draftsforfriends, WP_DraftsForFriends_Install::table(), 'the registered name and the built name disagree' );
 	}
 
@@ -163,7 +163,7 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 
 		WP_DraftsForFriends_Install::maybe_upgrade();
 
-		$this->assertSame( array( 'expires' => 0 ), get_option( WP_DraftsForFriends_Options::OPTION ) );
+		$this->assertSame( array( 'expires' => 0 ), get_option( WP_DraftsForFriends_Options::OPTION ), 'With the markers current the upgrade leaves the stored row untouched.' );
 	}
 
 	public function test_activation_brings_a_single_site_up_to_date() {

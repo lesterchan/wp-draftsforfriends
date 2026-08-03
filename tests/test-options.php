@@ -22,8 +22,8 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_the_row_names_are_the_ones_section_2_1_asks_for() {
-		$this->assertSame( 'wp_draftsforfriends_options', WP_DraftsForFriends_Options::OPTION );
-		$this->assertSame( 'wp_draftsforfriends_version', WP_DraftsForFriends_Options::VERSION );
+		$this->assertSame( 'wp_draftsforfriends_options', WP_DraftsForFriends_Options::OPTION, 'The settings row is named as section 2.1 requires.' );
+		$this->assertSame( 'wp_draftsforfriends_version', WP_DraftsForFriends_Options::VERSION, 'The version row is named as section 2.1 requires.' );
 	}
 
 	public function test_get_merges_the_defaults_over_a_partial_row() {
@@ -38,7 +38,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	public function test_get_survives_a_row_that_is_not_an_array() {
 		update_option( WP_DraftsForFriends_Options::OPTION, 'nonsense' );
 
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::get() );
+		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::get(), 'A row that is not an array falls back to the defaults rather than propagating.' );
 	}
 
 	public function test_get_returns_one_key_or_null_for_an_unknown_one() {
@@ -49,8 +49,8 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 			)
 		);
 
-		$this->assertSame( 4, WP_DraftsForFriends_Options::get( 'expires' ) );
-		$this->assertSame( 'd', WP_DraftsForFriends_Options::get( 'measure' ) );
+		$this->assertSame( 4, WP_DraftsForFriends_Options::get( 'expires' ), 'A known key reads back its stored value.' );
+		$this->assertSame( 'd', WP_DraftsForFriends_Options::get( 'measure' ), 'Each known key reads back its own value, not the first.' );
 		$this->assertNull( WP_DraftsForFriends_Options::get( 'no_such_key' ), 'An unknown key reads back null rather than raising a notice.' );
 	}
 
@@ -75,20 +75,21 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 				'plugin' => '',
 				'db'     => '',
 			),
-			WP_DraftsForFriends_Options::get_versions()
+			WP_DraftsForFriends_Options::get_versions(),
+			'A version row that is not an array falls back to empty markers rather than propagating.'
 		);
 	}
 
 	public function test_the_sanitiser_holds_the_duration_between_one_and_9999() {
 		$this->assertSame( 1, WP_DraftsForFriends_Options::sanitize( array( 'expires' => 0 ) )['expires'], 'a share that has already expired is not a setting' );
-		$this->assertSame( 1, WP_DraftsForFriends_Options::sanitize( array( 'expires' => -5 ) )['expires'] );
-		$this->assertSame( 9999, WP_DraftsForFriends_Options::sanitize( array( 'expires' => 100000 ) )['expires'] );
+		$this->assertSame( 1, WP_DraftsForFriends_Options::sanitize( array( 'expires' => -5 ) )['expires'], 'A duration below one is held at one rather than stored negative.' );
+		$this->assertSame( 9999, WP_DraftsForFriends_Options::sanitize( array( 'expires' => 100000 ) )['expires'], 'A duration above 9999 is held at 9999 rather than overflowing the field.' );
 		$this->assertSame( 7, WP_DraftsForFriends_Options::sanitize( array( 'expires' => '7' ) )['expires'], 'a posted value arrives as a string' );
 	}
 
 	public function test_the_sanitiser_rejects_a_unit_the_plugin_does_not_have() {
-		$this->assertSame( 'h', WP_DraftsForFriends_Options::sanitize( array( 'measure' => 'fortnights' ) )['measure'] );
-		$this->assertSame( 'h', WP_DraftsForFriends_Options::sanitize( array( 'measure' => '' ) )['measure'] );
+		$this->assertSame( 'h', WP_DraftsForFriends_Options::sanitize( array( 'measure' => 'fortnights' ) )['measure'], 'A unit the plugin does not have falls back to hours.' );
+		$this->assertSame( 'h', WP_DraftsForFriends_Options::sanitize( array( 'measure' => '' ) )['measure'], 'An empty unit falls back to hours too.' );
 
 		foreach ( array_keys( WP_DraftsForFriends_Shares::UNITS ) as $unit ) {
 			$this->assertSame( $unit, WP_DraftsForFriends_Options::sanitize( array( 'measure' => $unit ) )['measure'], "the '{$unit}' unit was rejected" );
@@ -96,8 +97,8 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_the_sanitiser_answers_a_non_array_with_the_defaults() {
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( 'nonsense' ) );
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( null ) );
+		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( 'nonsense' ), 'A non-array is answered with the defaults rather than stored.' );
+		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( null ), 'Null is answered with the defaults too.' );
 	}
 
 	public function test_the_sanitiser_reads_nothing_back_out_of_the_database() {
@@ -111,7 +112,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 		// Posting nothing must clean to the defaults rather than to what is
 		// stored: a sanitiser that reached for get_option() would return 6/d here,
 		// and that reaching back is exactly what §2.1 exists to prevent.
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( array() ) );
+		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( array() ), 'The sanitiser is a pure function of what was posted; it reads no stored value.' );
 	}
 
 	public function test_update_replaces_the_row_rather_than_merging_into_it() {
@@ -126,6 +127,6 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertSame( array( 'expires' => 8 ), get_option( WP_DraftsForFriends_Options::OPTION ), 'update() must write what it was given' );
 
 		// The defaults are merged on read, so the reader still answers for measure.
-		$this->assertSame( 'h', WP_DraftsForFriends_Options::get( 'measure' ) );
+		$this->assertSame( 'h', WP_DraftsForFriends_Options::get( 'measure' ), 'An update replaces the row, so a key absent from the new value takes its default.' );
 	}
 }

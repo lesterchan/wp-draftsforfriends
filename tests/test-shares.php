@@ -17,7 +17,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 	public function test_table_is_registered() {
 		global $wpdb;
 
-		$this->assertSame( $wpdb->prefix . 'draftsforfriends', $wpdb->draftsforfriends );
+		$this->assertSame( $wpdb->prefix . 'draftsforfriends', $wpdb->draftsforfriends, 'The table is registered on wpdb, so the query can name it as a property.' );
 		$this->assertContains( 'draftsforfriends', $wpdb->tables, '$wpdb->tables is what re-prefixes the name across switch_to_blog()' );
 	}
 
@@ -30,7 +30,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 	 * @param int    $expected Seconds for a duration of 2.
 	 */
 	public function test_calculate_expiry_units( $unit, $expected ) {
-		$this->assertSame( $expected, WP_DraftsForFriends_Shares::calculate_expiry( 2, $unit ) );
+		$this->assertSame( $expected, WP_DraftsForFriends_Shares::calculate_expiry( 2, $unit ), 'The ' . $unit . ' unit does not convert to the number of seconds it names.' );
 	}
 
 	/**
@@ -51,16 +51,16 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 	 * An unrecognised unit falls back to minutes rather than warning.
 	 */
 	public function test_calculate_expiry_rejects_unknown_unit() {
-		$this->assertSame( 120, WP_DraftsForFriends_Shares::calculate_expiry( 2, 'zzz' ) );
-		$this->assertSame( 120, WP_DraftsForFriends_Shares::calculate_expiry( 2, '' ) );
+		$this->assertSame( 120, WP_DraftsForFriends_Shares::calculate_expiry( 2, 'zzz' ), 'An unknown unit falls back to minutes rather than to zero seconds.' );
+		$this->assertSame( 120, WP_DraftsForFriends_Shares::calculate_expiry( 2, '' ), 'An empty unit falls back to minutes too.' );
 	}
 
 	/**
 	 * A non-positive duration falls back to sixty of whatever unit was given.
 	 */
 	public function test_calculate_expiry_rejects_non_positive_duration() {
-		$this->assertSame( 60 * HOUR_IN_SECONDS, WP_DraftsForFriends_Shares::calculate_expiry( 0, 'h' ) );
-		$this->assertSame( 60 * HOUR_IN_SECONDS, WP_DraftsForFriends_Shares::calculate_expiry( -5, 'h' ) );
+		$this->assertSame( 60 * HOUR_IN_SECONDS, WP_DraftsForFriends_Shares::calculate_expiry( 0, 'h' ), 'A zero duration falls back to the default rather than expiring at once.' );
+		$this->assertSame( 60 * HOUR_IN_SECONDS, WP_DraftsForFriends_Shares::calculate_expiry( -5, 'h' ), 'A negative duration falls back to the default rather than expiring in the past.' );
 	}
 
 	/**
@@ -71,12 +71,12 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 			return gmdate( 'Y-m-d H:i:s', time() + $seconds );
 		};
 
-		$this->assertSame( 'Expired', WP_DraftsForFriends_Shares::countdown( $in( -1 ) ) );
-		$this->assertSame( 'Expired', WP_DraftsForFriends_Shares::countdown( $in( -DAY_IN_SECONDS ) ) );
+		$this->assertSame( 'Expired', WP_DraftsForFriends_Shares::countdown( $in( -1 ) ), 'A share one second past its expiry reads Expired.' );
+		$this->assertSame( 'Expired', WP_DraftsForFriends_Shares::countdown( $in( -DAY_IN_SECONDS ) ), 'A long-expired share reads Expired rather than counting up.' );
 
-		$this->assertStringContainsString( 'second', WP_DraftsForFriends_Shares::countdown( $in( 30 ) ) );
-		$this->assertStringContainsString( '2 hours', WP_DraftsForFriends_Shares::countdown( $in( 2 * HOUR_IN_SECONDS + 30 ) ) );
-		$this->assertStringContainsString( '3 days', WP_DraftsForFriends_Shares::countdown( $in( 3 * DAY_IN_SECONDS + 30 ) ) );
+		$this->assertStringContainsString( 'second', WP_DraftsForFriends_Shares::countdown( $in( 30 ) ), 'Under a minute the countdown is given in seconds.' );
+		$this->assertStringContainsString( '2 hours', WP_DraftsForFriends_Shares::countdown( $in( 2 * HOUR_IN_SECONDS + 30 ) ), 'Over an hour the countdown is given in hours.' );
+		$this->assertStringContainsString( '3 days', WP_DraftsForFriends_Shares::countdown( $in( 3 * DAY_IN_SECONDS + 30 ) ), 'Over a day the countdown is given in days.' );
 	}
 
 	/**
@@ -85,9 +85,9 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 	public function test_countdown_is_singular_for_one() {
 		$countdown = WP_DraftsForFriends_Shares::countdown( gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS + HOUR_IN_SECONDS + MINUTE_IN_SECONDS + 5 ) );
 
-		$this->assertStringContainsString( '1 day', $countdown );
-		$this->assertStringContainsString( '1 hour', $countdown );
-		$this->assertStringNotContainsString( 'days', $countdown );
+		$this->assertStringContainsString( '1 day', $countdown, 'One day takes the singular.' );
+		$this->assertStringContainsString( '1 hour', $countdown, 'One hour takes the singular.' );
+		$this->assertStringNotContainsString( 'days', $countdown, 'The singular is used exactly, with no plural left elsewhere in the phrase.' );
 	}
 
 	/**
@@ -103,8 +103,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$share = $result['shared'];
 
-		$this->assertSame( (int) $this->draft_id, (int) $share->post_id );
-		$this->assertSame( (int) $this->author_id, (int) $share->user_id );
+		$this->assertSame( (int) $this->draft_id, (int) $share->post_id, 'The share records the post it is for.' );
+		$this->assertSame( (int) $this->author_id, (int) $share->user_id, 'The share records who made it, which is what scopes the list by capability.' );
 		$this->assertMatchesRegularExpression( '/^[A-Za-z0-9]{32}$/', $share->hash, 'the hash must stay 32 alphanumeric characters' );
 
 		$delta = strtotime( $share->date_expired . ' UTC' ) - time();
@@ -122,7 +122,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 		$first  = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
 		$second = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' );
 
-		$this->assertNotSame( $first['shared']->hash, $second['shared']->hash );
+		$this->assertNotSame( $first['shared']->hash, $second['shared']->hash, 'Two shares of the same draft get different hashes, or one link would unlock both.' );
 	}
 
 	/**
@@ -160,7 +160,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$now = strtotime( $result['shared']->date_expired . ' UTC' );
 
-		$this->assertEqualsWithDelta( HOUR_IN_SECONDS, $now - $was, 5 );
+		$this->assertEqualsWithDelta( HOUR_IN_SECONDS, $now - $was, 5, 'Extending an unexpired share adds to its expiry rather than restarting it.' );
 		$this->assertNotEmpty( $result['shared']->date_extended, 'Extending stamps the date it was extended.' );
 	}
 
@@ -304,9 +304,9 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 		$share = WP_DraftsForFriends_Shares::create( $this->draft_id, 1, 'h' )['shared'];
 		$url   = WP_DraftsForFriends_Shares::url( $share );
 
-		$this->assertStringContainsString( 'p=' . $this->draft_id, $url );
-		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $url );
-		$this->assertStringStartsWith( home_url(), $url );
+		$this->assertStringContainsString( 'p=' . $this->draft_id, $url, 'The URL carries the post.' );
+		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $url, 'The URL carries the hash.' );
+		$this->assertStringStartsWith( home_url(), $url, 'The URL is on this site, not a bare path a mail client cannot follow.' );
 	}
 
 	/**
@@ -323,7 +323,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 			}
 		}
 
-		$this->assertContains( $this->draft_id, $ids );
+		$this->assertContains( $this->draft_id, $ids, 'An author is offered their own draft.' );
 		$this->assertNotContains( $this->editor_draft_id, $ids, "an author was offered someone else's draft" );
 
 		wp_set_current_user( $this->editor_id );
@@ -336,8 +336,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 			}
 		}
 
-		$this->assertContains( $this->draft_id, $ids );
-		$this->assertContains( $this->editor_draft_id, $ids );
+		$this->assertContains( $this->draft_id, $ids, 'An editor is offered the author draft.' );
+		$this->assertContains( $this->editor_draft_id, $ids, 'An editor is offered their own as well, so the list is widened rather than swapped.' );
 	}
 
 	/**
@@ -413,7 +413,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertSame(
 			'0',
-			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) )
+			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) ),
+			'Deleting the post deletes its shares, leaving no link to a post that is gone.'
 		);
 	}
 
@@ -431,7 +432,8 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertSame(
 			'1',
-			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) )
+			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->draftsforfriends} WHERE post_id = %d", $this->draft_id ) ),
+			'Trashing keeps the shares, because an untrash has to restore the link.'
 		);
 	}
 
@@ -461,14 +463,14 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 		WP_DraftsForFriends_Shares::create( $last, 5, 'h' );
 
 		$asc = WP_DraftsForFriends_Shares::query( 'post_title', 'asc', 0, 50 );
-		$this->assertSame( 'AAA First', $asc[0]->post_title );
+		$this->assertSame( 'AAA First', $asc[0]->post_title, 'Ascending really sorts ascending rather than returning insertion order.' );
 
 		$desc = WP_DraftsForFriends_Shares::query( 'post_title', 'desc', 0, 50 );
-		$this->assertSame( 'ZZZ Last', $desc[0]->post_title );
+		$this->assertSame( 'ZZZ Last', $desc[0]->post_title, 'Descending really reverses it.' );
 
 		// A longer share sorts last by expiry ascending.
 		$by_expiry = WP_DraftsForFriends_Shares::query( 'date_expired', 'asc', 0, 50 );
-		$this->assertSame( 'ZZZ Last', end( $by_expiry )->post_title );
+		$this->assertSame( 'ZZZ Last', end( $by_expiry )->post_title, 'Sorting by expiry is its own order, not the title order again.' );
 	}
 
 	/**
@@ -486,7 +488,7 @@ class WP_DraftsForFriends_Shares_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertCount( 2, $page_one, 'The first page holds its two rows.' );
 		$this->assertCount( 2, $page_two, 'The second page holds the other two.' );
-		$this->assertSame( array(), array_intersect( $page_one, $page_two ) );
+		$this->assertSame( array(), array_intersect( $page_one, $page_two ), 'The two pages share no row, so paging does not repeat itself.' );
 	}
 
 	/**

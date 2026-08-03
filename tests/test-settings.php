@@ -31,8 +31,8 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	public function test_the_settings_page_identifier_is_not_a_menu_slug() {
 		global $submenu;
 
-		$this->assertSame( 'wp-draftsforfriends-settings', WP_DraftsForFriends_Settings::PAGE );
-		$this->assertNotSame( WP_DraftsForFriends_Admin::PAGE, WP_DraftsForFriends_Settings::PAGE );
+		$this->assertSame( 'wp-draftsforfriends-settings', WP_DraftsForFriends_Settings::PAGE, 'The settings page has an identifier of its own.' );
+		$this->assertNotSame( WP_DraftsForFriends_Admin::PAGE, WP_DraftsForFriends_Settings::PAGE, 'It is not the main screen slug; sharing one would register both against the same page.' );
 
 		// It is what do_settings_sections() is keyed on and nothing else. A menu
 		// entry using it would be the second screen §4.2.1 replaced with a tab.
@@ -104,11 +104,11 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 
 		$html = $this->render_settings_page();
 
-		$this->assertStringContainsString( 'Drafts for Friends', $html );
+		$this->assertStringContainsString( 'Drafts for Friends', $html, 'The settings screen is titled after the plugin.' );
 		$this->assertStringContainsString( 'nav-tab-active', $html, 'the Settings tab is not marked active' );
 		$this->assertStringContainsString( 'name="wp_draftsforfriends_options[expires]"', $html, 'the field does not post into the settings row' );
 		$this->assertStringContainsString( 'value="6"', $html, 'the stored duration is not shown' );
-		$this->assertStringContainsString( 'name="wp_draftsforfriends_options[measure]"', $html );
+		$this->assertStringContainsString( 'name="wp_draftsforfriends_options[measure]"', $html, 'The unit field posts into the settings row rather than a loose name.' );
 		$this->assert_option_selected( 'd', $html, 'the stored unit is not preselected' );
 	}
 
@@ -283,7 +283,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 
 		WP_DraftsForFriends_Settings::capability( 'settings' );
 
-		$this->assertSame( array( 'settings' ), $seen );
+		$this->assertSame( array( 'settings' ), $seen, 'The filter is told which screen is asking, and told once.' );
 	}
 
 	public function test_the_plugins_screen_gains_a_settings_link_for_an_administrator() {

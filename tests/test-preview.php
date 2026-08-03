@@ -145,8 +145,8 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 		$posts = $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' );
 
 		$this->assertCount( 1, $posts, 'A valid hash returns the draft it unlocks.' );
-		$this->assertSame( $this->draft_id, $posts[0]->ID );
-		$this->assertStringContainsString( 'SECRET-DRAFT-BODY', $posts[0]->post_content );
+		$this->assertSame( $this->draft_id, $posts[0]->ID, 'The post returned is the one the hash unlocks, not merely some post.' );
+		$this->assertStringContainsString( 'SECRET-DRAFT-BODY', $posts[0]->post_content, 'The body is the draft content, so the preview really rendered it.' );
 	}
 
 	/**
@@ -155,7 +155,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 	public function test_comments_are_forced_closed() {
 		$posts = $this->visit( $this->draft_id, 'HASHLIVE0000000000000000000000AA' );
 
-		$this->assertSame( 'closed', $posts[0]->comment_status );
+		$this->assertSame( 'closed', $posts[0]->comment_status, 'Comments are forced closed on a preview; a shared draft is not a published post.' );
 	}
 
 	/**
@@ -345,7 +345,7 @@ class WP_DraftsForFriends_Preview_Test extends WP_DraftsForFriends_TestCase {
 		// result -- but the plugin has not touched it, which the open comment
 		// status shows.
 		$this->assertCount( 1, $posts, 'Publishing the post ends the preview and returns it as an ordinary post.' );
-		$this->assertSame( get_post_field( 'comment_status', $this->draft_id ), $posts[0]->comment_status );
+		$this->assertSame( get_post_field( 'comment_status', $this->draft_id ), $posts[0]->comment_status, 'Once published the post keeps its own comment status rather than the forced one.' );
 	}
 
 	/**
