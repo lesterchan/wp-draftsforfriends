@@ -179,6 +179,208 @@ function resetPlugin() {
 }
 
 /**
+ * The settings row as the database holds it, with no defaults merged in.
+ *
+ * Not the same question as setting() below. WP_DraftsForFriends_Options::get()
+ * merges over the defaults, so it answers identically for a row holding the
+ * defaults and for no row at all -- and "no row at all" is what an upgrade that
+ * never seeded one leaves behind. Ask the database when the question is "was it
+ * written".
+ *
+ * @return {Object|false} The stored array, or false when there is no row.
+ */
+function rawOptions() {
+	return JSON.parse(
+		wpEval( "echo '<<<' . wp_json_encode( get_option( 'wp_draftsforfriends_options' ) ) . '>>>';" ),
+	);
+}
+
+/**
+ * Write the settings row exactly as given, or remove it.
+ *
+ * @param {Object|null} options Option keys to store, or null to delete the row.
+ * @return {void}
+ */
+function setRawOptions( options ) {
+	if ( null === options ) {
+		wpEval( "delete_option( 'wp_draftsforfriends_options' ); echo '<<<done>>>';" );
+
+		return;
+	}
+
+	const data = Buffer.from( JSON.stringify( options ), 'utf8' ).toString( 'base64' );
+
+	wpEval(
+		`update_option( 'wp_draftsforfriends_options', json_decode( base64_decode( '${ data }' ), true ) );
+		echo '<<<done>>>';`,
+	);
+}
+
+/**
+ * The defaults the running code would fall back to.
+ *
+ * Asked of the install rather than transcribed, so a default that changes
+ * cannot leave a fixture behind describing the release before it.
+ *
+ * @return {Object} The default option array.
+ */
+function defaultOptions() {
+	return JSON.parse(
+		wpEval( "echo '<<<' . wp_json_encode( WP_DraftsForFriends_Options::get_defaults() ) . '>>>';" ),
+	);
+}
+
+/**
+ * The upgrade markers, as the database holds them.
+ *
+ * @return {Object|false} The stored array, or false when there is no row.
+ */
+function versionRow() {
+	return JSON.parse(
+		wpEval( "echo '<<<' . wp_json_encode( get_option( 'wp_draftsforfriends_version' ) ) . '>>>';" ),
+	);
+}
+
+/**
+ * Stamp the upgrade markers.
+ *
+ * @param {Object} versions The two markers.
+ * @return {void}
+ */
+function setVersionRow( versions ) {
+	const data = Buffer.from( JSON.stringify( versions ), 'utf8' ).toString( 'base64' );
+
+	wpEval(
+		`update_option( 'wp_draftsforfriends_version', json_decode( base64_decode( '${ data }' ), true ) );
+		echo '<<<done>>>';`,
+	);
+}
+
+/**
+ * Remove the version row, which is the state an unstamped install is in.
+ *
+ * @return {void}
+ */
+function deleteVersionRow() {
+	wpEval( "delete_option( 'wp_draftsforfriends_version' ); echo '<<<done>>>';" );
+}
+
+/**
+ * The version numbers the running code expects to find stamped.
+ *
+ * @return {{plugin: string, db: string}} The two markers.
+ */
+function runningVersions() {
+	return JSON.parse(
+		wpEval(
+			`echo '<<<' . wp_json_encode( array(
+				'plugin' => WP_DRAFTSFORFRIENDS_VERSION,
+				'db'     => WP_DRAFTSFORFRIENDS_DB_VERSION,
+			) ) . '>>>';`,
+		),
+	);
+}
+
+/**
+ * The schema counter the unreleased 2.0.0 work wrote, or false.
+ *
+ * The only legacy row this plugin has in the wild: every released version
+ * stored no options at all.
+ *
+ * @return {string|false} The stored counter, or false when the row is gone.
+ */
+function legacyDbVersion() {
+	return JSON.parse(
+		wpEval( "echo '<<<' . wp_json_encode( get_option( 'draftsforfriends_db_version' ) ) . '>>>';" ),
+	);
+}
+
+/**
+ * Write that legacy schema counter, or take it away.
+ *
+ * @param {string|null} value The counter, or null to delete the row.
+ * @return {void}
+ */
+function setLegacyDbVersion( value ) {
+	if ( null === value ) {
+		wpEval( "delete_option( 'draftsforfriends_db_version' ); echo '<<<done>>>';" );
+
+		return;
+	}
+
+	wpEval(
+		`update_option( 'draftsforfriends_db_version', '${ value }' ); echo '<<<done>>>';`,
+	);
+}
+
+/**
+ * Whether the shares table exists.
+ *
+ * @return {boolean} True when the table is there.
+ */
+function tableExists() {
+	return (
+		'1' ===
+		wpEval(
+			`global $wpdb;
+			$table = WP_DraftsForFriends_Install::table();
+			echo '<<<' . (int) (bool) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) . '>>>';`,
+		)
+	);
+}
+
+/**
+ * Drop the shares table, which is the state a site upgrading from 1.0.2 is in.
+ *
+ * Every test that calls this leaves the upgrade to put it back; the afterEach
+ * hook restores the rest. A suite that dropped it and did not is one where
+ * every later spec fails for a reason that has nothing to do with what it tests.
+ *
+ * @return {void}
+ */
+function dropTable() {
+	wpEval(
+		`global $wpdb;
+		$table = WP_DraftsForFriends_Install::table();
+		$wpdb->query( "DROP TABLE IF EXISTS \`{$table}\`" );
+		echo '<<<done>>>';`,
+	);
+}
+
+/**
+ * Deactivate and reactivate the plugin, which is the path that fires activate().
+ *
+ * A different entry point from the one a real update takes: updating through
+ * the Plugins screen never fires the activation hook, which is why the upgrade
+ * cannot live there alone.
+ *
+ * @return {void}
+ */
+function reactivatePlugin() {
+	wpEval(
+		`require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		deactivate_plugins( 'wp-draftsforfriends/wp-draftsforfriends.php' );
+		activate_plugin( 'wp-draftsforfriends/wp-draftsforfriends.php' );
+		echo '<<<done>>>';`,
+	);
+}
+
+/**
+ * Put the plugin back on, whatever a test left behind.
+ *
+ * @return {void}
+ */
+function ensurePluginActive() {
+	wpEval(
+		`require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		if ( ! is_plugin_active( 'wp-draftsforfriends/wp-draftsforfriends.php' ) ) {
+			activate_plugin( 'wp-draftsforfriends/wp-draftsforfriends.php' );
+		}
+		echo '<<<done>>>';`,
+	);
+}
+
+/**
  * One stored setting.
  *
  * @param {string} key Setting name, 'expires' or 'measure'.
@@ -386,14 +588,27 @@ module.exports = {
 	countShares,
 	createDraft,
 	createShare,
+	defaultOptions,
+	deleteVersionRow,
+	dropTable,
+	ensurePluginActive,
+	legacyDbVersion,
 	listRow,
 	logInAs,
 	openShares,
+	rawOptions,
+	reactivatePlugin,
 	resetPlugin,
+	runningVersions,
+	setLegacyDbVersion,
+	setRawOptions,
+	setVersionRow,
 	setting,
 	shareColumn,
 	shareDraft,
 	shareLink,
+	tableExists,
 	uniqueTitle,
+	versionRow,
 	wpEval,
 };
