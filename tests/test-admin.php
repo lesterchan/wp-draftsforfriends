@@ -140,6 +140,40 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertStringContainsString( 'Draft &lt;b&gt;Title&lt;/b&gt;', $html, 'The stored title is escaped where it is rendered, not merely on the way in.' );
 	}
 
+	/**
+	 * The three payloads §7.2.4 names, written into the row unsanitised.
+	 *
+	 * The fixture title above carries `<b>` and a quote, which is enough to see
+	 * a missing esc_html() but not enough to see the difference between
+	 * escaping and dropping. These go in through $wpdb rather than through
+	 * wp_insert_post(), because sanitising on the way in is the assumption
+	 * under test and not a step to reproduce -- this is the row a pre-fix or
+	 * compromised install already has.
+	 *
+	 * Both halves are asserted. A screen that swallowed the title entirely
+	 * would pass the first assertion while losing the share's only human
+	 * label.
+	 *
+	 * @return void
+	 */
+	public function test_a_hostile_stored_title_reaches_the_screen_escaped() {
+		global $wpdb;
+
+		$payload = '<script>window.dffXss=1;</script>" onmouseover="alert(1)" <img src=x onerror="alert(1)">';
+
+		$this->make_share( $this->author_id, $this->draft_id );
+
+		$wpdb->update( $wpdb->posts, array( 'post_title' => $payload ), array( 'ID' => $this->draft_id ) );
+		clean_post_cache( $this->draft_id );
+
+		$html = $this->render_admin_page();
+
+		$this->assertStringNotContainsString( '<script', $html, 'the stored title reached the page with a live script element' );
+		$this->assertStringNotContainsString( '<img', $html, 'the stored title reached the page with a live img element, which is what fires onerror' );
+		$this->assertStringNotContainsString( '" onmouseover="', $html, 'the stored title broke out of its attribute' );
+		$this->assertStringContainsString( esc_html( $payload ), $html, 'The title must survive escaping as text; a share whose label silently vanished is its own bug.' );
+	}
+
 	public function test_the_list_is_scoped_by_capability() {
 		$editor_share = $this->make_share( $this->editor_id, $this->editor_draft_id );
 		$author_share = $this->make_share( $this->author_id, $this->draft_id );
