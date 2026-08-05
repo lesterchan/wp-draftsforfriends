@@ -89,8 +89,9 @@ hooked to `deleted_post` and fires before the table exists. Known, harmless, and
 recorded in `_standards/RESUME.md` — do not go hunting for it again.
 
 `test-preview.php` covers the capture/restore logic and the denied statuses;
-`test-multisite.php` the per-site table creation. `tests/e2e/` (4 specs, 40
-tests) is among the twelve suites listed as never run to green.
+`test-multisite.php` the per-site table creation. `tests/e2e/` is 5 specs and 50
+tests. `upgrade.spec.js` (8) is green as of 2026-08-05; **the other four were
+not re-run that day**, so verify before trusting them.
 
 ## Open question
 
