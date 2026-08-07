@@ -132,9 +132,9 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 
 ## Screenshots
 
-1. WP-DraftsForFriends administration page
-2. Extending the expiry of shared drafts
-3. Previewing a shared draft
+1. Posts -> WP-DraftsForFriends: the share form, and every share with its countdown
+2. The Settings tab, where the default duration and the shareable statuses are set
+3. What the friend sees: an unpublished post, with no account and no login
 
 ## Changelog
 
