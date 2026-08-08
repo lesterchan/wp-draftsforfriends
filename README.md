@@ -34,6 +34,13 @@ Modified from Drafts for Friends, originally by Neville Longbottom. The plugin i
 ### Donations
 I spent most of my free time creating, updating, maintaining and supporting these plugins, if you really love my plugins and could spare me a couple of bucks, I will really appreciate it. If not feel free to use it without any obligations.
 
+## Installation
+
+1. Install and activate the plugin.
+1. Go to `WP-Admin -> Posts -> WP-DraftsForFriends` and share your first draft.
+
+There is nothing to configure before you start. Sharing takes the `publish_posts` capability rather than `manage_options`, so any author can share their own drafts without being made an administrator.
+
 ## Usage
 Go to `Posts -> WP-DraftsForFriends`. The page has two tabs, **Shared Drafts** and **Settings**.
 
