@@ -150,7 +150,7 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 ## Screenshots
 
 1. Posts -> WP-DraftsForFriends: the share form, and every share with its countdown
-2. The Settings tab, where the default duration and the shareable statuses are set
+2. The Settings tab, which sets how long a new share lasts unless you say otherwise
 3. What the friend sees: an unpublished post, with no account and no login
 
 ## Changelog
