@@ -47,6 +47,23 @@ The **Settings** tab sets the duration a new share starts on. It is only a start
 
 Anyone with the `edit_others_posts` capability — administrators and editors — sees every shared draft on the site and can share any unpublished post. Authors and contributors see only their own, and can only share posts they are allowed to edit.
 
+### WP-CLI
+```
+wp draftsforfriends list --user=admin
+wp draftsforfriends create 42 --user=admin
+wp draftsforfriends create 42 --expires=14 --measure=d --user=admin
+wp draftsforfriends extend 3 4 5 --expires=1 --measure=d --user=admin
+wp draftsforfriends revoke 3 --yes --user=admin
+```
+
+`create` prints the share link on a line of its own before its success message, and `list` prints one per row. **A share link is the credential** — whoever holds it reads the unpublished post until the link expires, with no account and no login — so treat the output of both as you would the drafts themselves. Shell history, a CI log and a captured `stdout` are all places those links now live.
+
+**Pass `--user`.** WP-CLI runs as nobody unless told otherwise, and every one of these is scoped exactly as the screen is: a share belongs to whoever created it, anyone with `edit_others_posts` sees them all, and creating, extending or revoking one checks that you may edit the post it points at. Run as nobody, `list` reports nothing and the rest are refused.
+
+`--expires` and `--measure` default to the duration on the **Settings** tab, the same value the share form and **Extend by** start on. `extend` and `revoke` take as many ids as you like, exactly as the bulk actions do. `revoke` asks before it acts, because the link stops working immediately and cannot be restored; `--yes` answers for a script.
+
+There is no subcommand for the settings — that is one option row, which `wp option get wp_draftsforfriends_options` already reads.
+
 ### Filters
 `wp_draftsforfriends_capability` decides who may reach each tab. The context is `shares` for the Shared Drafts tab or `settings` for the Settings tab:
 
@@ -152,6 +169,7 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 * NEW: Added the `wp_draftsforfriends_share_url` filter and its companion `wp_draftsforfriends_requested_hash`. The link a friend is given and the check that lets them read it now go through one contract, so a site can move share links to a shape of its own. Filtering only the first leaves every link 404ing.
 * NEW: Added a Copy link button to each row.
 * NEW: Added a *Shared drafts per page* screen option.
+* NEW: A `wp draftsforfriends` WP-CLI command — `list`, `create`, `extend` and `revoke`, the four things the screen does. It prints share links, which are credentials, and needs `--user` because everything it does is scoped to who is asking.
 * NEW: Added a PHPUnit test suite, vitest coverage for the script, and GitHub Actions CI.
 * CHANGED: The shared drafts list is a standard WordPress list table, with sortable columns, standard pagination at twenty rows and bulk actions, replacing roughly 250 lines of hand-rolled pagination links and column headers.
 * CHANGED: Messages are core admin notices raised through `add_settings_error()` rather than a hand-built banner the script unhid.

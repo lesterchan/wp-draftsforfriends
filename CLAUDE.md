@@ -77,6 +77,40 @@ it.
 * The old page slug embedded the plugin's folder name, so renaming the directory
   broke the screen.
 
+## WP-CLI
+
+`wp draftsforfriends list|create|extend|revoke` — the four things the screen
+does, and no fifth. **There is no REST namespace, and that is a decision rather
+than a gap:** the plugin registers no `admin-ajax.php` action, every write is an
+ordinary form post, and the one client that is not a browser following a link is
+the command below. A route would be surface with nothing on the other end of it.
+
+**Every subcommand goes through `WP_DraftsForFriends_Shares`**, which already
+returned data rather than printing it, so nothing had to be extracted: the screen
+turns a result array into an admin notice and the command turns the same array
+into a `WP_CLI::success()` or a warning.
+
+**It is scoped by current user, and WP-CLI has none unless `--user` is passed.**
+Run as nobody, `list` reports an empty site and every write is refused on
+permissions — which is correct rather than a bug, but reads as one, so both the
+class docblock and the README say so and tests pin both.
+
+**A subcommand that prints a share link is printing a credential**, and that is
+deliberate: handing the link to somebody is the whole plugin, and the Link column
+of the screen prints it too. Say so where it is printed rather than leaving it
+unremarked.
+
+**`revoke` confirms and `extend` does not.** Revoking cannot be undone — there is
+no trash for a share and the hash is recorded nowhere else — so it goes through
+`WP_CLI::confirm()` and a script needs `--yes`. Extending loses nothing and is
+undone by revoking.
+
+The command's tests turn **pretty permalinks on** and assert the printed link
+still asks for the post by bare id. That is not decoration: the link is
+`?p=<id>`, and a rewrite to the permalink looks the post up among the *public*
+statuses, so it 404s for exactly the unpublished statuses the plugin exists to
+share. A draft, a scheduled post and a private post are each covered.
+
 ## The upgrade, and why it is tested through a browser
 
 There is remarkably little to fold in here, and that is the finding rather than

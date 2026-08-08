@@ -83,6 +83,8 @@ class WP_DraftsForFriends {
 
 		new WP_DraftsForFriends_Preview();
 
+		self::register_command();
+
 		// The list table pulls in wp-admin/includes/class-wp-list-table.php, so
 		// neither it nor the admin screens are loaded on front-end requests.
 		// There is no AJAX endpoint to keep loading unconditionally any more:
@@ -93,6 +95,26 @@ class WP_DraftsForFriends {
 			WP_DraftsForFriends_Admin::init();
 			WP_DraftsForFriends_Settings::init();
 		}
+	}
+
+	/**
+	 * Register the WP-CLI command.
+	 *
+	 * The class file is required here rather than at plugin load because it
+	 * extends WP_CLI_Command, which only exists when WP-CLI is the one running
+	 * WordPress. Requiring it unconditionally is a fatal error on every web
+	 * request.
+	 *
+	 * @return void
+	 */
+	public static function register_command() {
+		if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
+			return;
+		}
+
+		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-command.php';
+
+		WP_CLI::add_command( 'draftsforfriends', 'WP_DraftsForFriends_Command' );
 	}
 
 	/**
