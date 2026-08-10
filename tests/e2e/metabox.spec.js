@@ -65,9 +65,13 @@ test.describe( 'The post editor meta box', () => {
 			echo '<<<' . $wpdb->get_var( "SELECT hash FROM {$wpdb->draftsforfriends} ORDER BY id DESC LIMIT 1" ) . '>>>';`,
 		);
 
-		// The editor refreshes the meta boxes after the save, so the new link
-		// is on screen without a reload. Scoped to the list rather than the
-		// box: "Manage all shared drafts" is a link in here too.
+		// Reopened, because the block editor posts the meta box fields and does
+		// not re-render the box with what came back -- so the link the save
+		// created appears on the next load of the editor, not in place.
+		await admin.editPost( draft.id );
+
+		// Scoped to the list rather than the box: "Manage all shared drafts" is
+		// a link in here too.
 		await expect( shareLinks( box ) ).toHaveAttribute(
 			'href',
 			new RegExp( `draftsforfriends=${ hash }` ),
@@ -88,12 +92,15 @@ test.describe( 'The post editor meta box', () => {
 
 		await editor.saveDraft();
 
-		// The refreshed box staying empty proves the save round-tripped without
-		// creating anything.
+		// The row is the far end. Reopened as well, because the box is drawn at
+		// load: a list that is still empty after the save is what a person sees.
+		expect( countShares() ).toBe( 0 );
+
+		await admin.editPost( draft.id );
+
 		await expect(
 			page.locator( '#wp-draftsforfriends .draftsforfriends-metabox-shares li' ),
 		).toHaveCount( 0 );
-		expect( countShares() ).toBe( 0 );
 	} );
 
 	test( 'the box lists the links the post already has', async ( {
