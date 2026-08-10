@@ -129,4 +129,55 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 		// The defaults are merged on read, so the reader still answers for measure.
 		$this->assertSame( 'h', WP_DraftsForFriends_Options::get( 'measure' ), 'An update replaces the row, so a key absent from the new value takes its default.' );
 	}
+
+	/**
+	 * The write path creates the row even when the value equals the default.
+	 *
+	 * Pinned at the door rather than through the upgrade, so the guarantee belongs
+	 * to update() rather than to whatever the upgrade happens to compute. With one
+	 * setting in the row the upgrade's result equals the defaults on nearly every
+	 * install, which is the case update_option() alone declines to write.
+	 *
+	 * @return void
+	 */
+	public function test_update_creates_the_row_when_the_value_equals_the_registered_default() {
+		delete_option( WP_DraftsForFriends_Options::OPTION );
+
+		WP_DraftsForFriends_Settings::register_settings();
+
+		// The precondition the defect needs: a bare read of an absent row answers
+		// with the defaults, so update_option() alone compares equal and declines
+		// to write. Core's add_option() fallback sits below that comparison.
+		$this->assertSame(
+			WP_DraftsForFriends_Options::get_defaults(),
+			get_option( WP_DraftsForFriends_Options::OPTION ),
+			'the registered default is what an absent row reads back as'
+		);
+
+		$this->assertTrue( WP_DraftsForFriends_Options::update( WP_DraftsForFriends_Options::get_defaults() ), 'update() reports that it wrote' );
+		$this->assertIsArray( get_option( WP_DraftsForFriends_Options::OPTION, false ), 'and the row is really there, read raw' );
+	}
+
+	/**
+	 * The shipped defaults survive the sanitiser unchanged.
+	 *
+	 * The assertion whose absence would let a typo decide whether the test above
+	 * means anything. A sanitiser that alters one character of the defaults makes
+	 * the written value differ from them, so update_option() finds a difference
+	 * and writes the row -- the equal-value case stops being exercised and the
+	 * test above starts passing for a reason unrelated to the code.
+	 *
+	 * @return void
+	 */
+	public function test_the_shipped_defaults_survive_sanitisation_unchanged() {
+		WP_DraftsForFriends_Settings::register_settings();
+
+		$defaults = WP_DraftsForFriends_Options::get_defaults();
+
+		$this->assertSame(
+			$defaults,
+			sanitize_option( WP_DraftsForFriends_Options::OPTION, $defaults ),
+			'the registered sanitize callback leaves the defaults alone'
+		);
+	}
 }

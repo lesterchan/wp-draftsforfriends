@@ -90,10 +90,36 @@ class WP_DraftsForFriends_Options {
 	/**
 	 * Replace the stored options.
 	 *
+	 * `update_option()` declines to write a value equal to the one `get_option()`
+	 * would return, and `register_setting()` is passed a `default`, which installs
+	 * a `default_option_wp_draftsforfriends_options` filter answering with the
+	 * shipped defaults for a row that does not exist. Core's `add_option()`
+	 * fallback sits immediately below that comparison and is unreachable once the
+	 * two compare equal. So an upgrade whose result happens to equal the defaults
+	 * -- which, with one setting in the row, is nearly every install -- writes
+	 * nothing at all, the row is never created, and the markers are stamped
+	 * complete either way, so the upgrade can never run again.
+	 *
+	 * It was held off by nothing but the order two callbacks were added in:
+	 * `maybe_upgrade()` is hooked to `admin_init` before `Settings::init()` hooks
+	 * `register_settings()` to it at the same priority, so the upgrade went first.
+	 * Reordering those two, or any third-party `default_option_*` filter, reaches
+	 * it silently.
+	 *
+	 * Passing an explicit default to `get_option()` defeats the registered one --
+	 * `filter_default_option()` returns early when a default was passed -- which
+	 * is what lets an absent row be told apart from a defaulted one and added
+	 * outright. `add_option()` runs the sanitize callback exactly as
+	 * `update_option()` does, so nothing else about the stored value changes.
+	 *
 	 * @param array $options Option values.
 	 * @return bool Whether the option row changed.
 	 */
 	public static function update( array $options ) {
+		if ( false === get_option( self::OPTION, false ) ) {
+			return add_option( self::OPTION, $options );
+		}
+
 		return update_option( self::OPTION, $options );
 	}
 
