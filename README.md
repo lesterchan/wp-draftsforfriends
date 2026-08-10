@@ -163,7 +163,7 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 ## Changelog
 
 ### 2.0.0
-* BREAKING: Requires WordPress 6.8 and PHP 8.2, up from 6.0 and 7.4.
+* BREAKING: Requires WordPress 6.8 and PHP 8.2.
 * BREAKING: The screen has moved from `edit.php?page=wp-draftsforfriends/wp-draftsforfriends.php` to `edit.php?page=wp-draftsforfriends`, still under `Posts -> WP-DraftsForFriends`, and is now one page with two tabs, `Shared Drafts` and `Settings`. Links already sent to friends are not affected.
 * BREAKING: Extend and Delete are no longer links on each row. They are bulk actions named Extend selected and Revoke selected, applied to the rows you tick. A row action is a `GET` and one prefetch away from revoking every share on the page.
 * BREAKING: Removed the `WPDraftsForFriends` class. The plugin is now `WP_DraftsForFriends` plus `WP_DraftsForFriends_Admin`, `_Install`, `_List_Table`, `_Options`, `_Preview`, `_Settings` and `_Shares` under `includes/`.
