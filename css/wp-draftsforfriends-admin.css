@@ -3,10 +3,12 @@
  *
  * Everything the screen needs beyond core, which is not much: column widths for
  * a table whose widest column holds a URL, somewhere to break that URL, and
- * spacing for the two controls the plugin adds to core's tablenav.
+ * spacing for the two controls the plugin adds to core's tablenav. The post
+ * editor's meta box reuses only the URL-breaking.
  *
- * §5.1: no physical properties and therefore no second RTL sheet. §5: no
- * font-family, font-size or colour is set anywhere, no hardcoded hex, no
+ * §5.1: no physical properties and therefore no second RTL sheet. §5: nothing
+ * sets a font or a colour -- the one font declaration is `inherit`, which is
+ * how a button is stopped from taking the browser's own -- no hardcoded hex, no
  * !important, and no transition to respect prefers-reduced-motion. There is no
  * prefers-color-scheme block because the plugin paints no surface of its own --
  * every element here is core's, wearing core's colours in both schemes.
@@ -44,9 +46,13 @@
 	overflow-wrap: anywhere;
 }
 
-/* The Copy link button sits after the link rather than under it. */
-.wp-list-table.shared-drafts .draftsforfriends-copy {
-	margin-block-start: 4px;
+/*
+ * A button takes the browser's own font rather than the row-action type the
+ * Edit Draft link beside it wears, so it is told to inherit -- §5's rule, not
+ * an exception to it. Colour is left to core's .button-link.
+ */
+.wp-list-table.shared-drafts .row-actions .draftsforfriends-copy {
+	font: inherit;
 }
 
 /* The Extend duration and its unit, in core's tablenav actions area. */
@@ -61,4 +67,26 @@
 /* The notice the script raises before a request is made. */
 #draftsforfriends-notice {
 	margin-block: 5px 15px;
+}
+
+/*
+ * The meta box's share links are long unbroken tokens in a narrow box, so the
+ * URL takes a line to itself and the button starts a new one rather than
+ * trailing off the end of the wrap.
+ */
+.draftsforfriends-metabox-shares a,
+.draftsforfriends-metabox-shares .description {
+	display: block;
+}
+
+.draftsforfriends-metabox-shares a {
+	overflow-wrap: anywhere;
+}
+
+.draftsforfriends-metabox-shares .draftsforfriends-copy {
+	margin-block-start: 4px;
+}
+
+.draftsforfriends-metabox-shares li + li {
+	margin-block-start: 12px;
 }

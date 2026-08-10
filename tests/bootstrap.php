@@ -56,13 +56,14 @@ tests_add_filter(
 require $_tests_dir . '/includes/bootstrap.php';
 
 /*
- * The plugin loads its three admin classes behind is_admin(), which is false for
+ * The plugin loads its admin classes behind is_admin(), which is false for
  * the whole of a PHPUnit run, so the tests that drive the screens would never
  * see them. Required here rather than in each test file's set_up().
  */
 require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-list-table.php';
 require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-admin.php';
 require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-settings.php';
+require_once dirname( __DIR__ ) . '/includes/class-wp-draftsforfriends-metabox.php';
 
 /*
  * Create the table and write the option rows once, before any test runs.

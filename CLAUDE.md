@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Gives an unpublished post a time-limited public URL —
 `?p=<id>&draftsforfriends=<hash>` — so an author can show a draft to somebody
 who has no account. One page with two tabs under **Posts**: `Shared Drafts` (a
-`WP_List_Table`) and `Settings`.
+`WP_List_Table`) and `Settings`. Since 2.0.1 the post editor also carries a
+side meta box that lists the post's links and creates one on save.
 
 ## Data
 
@@ -50,6 +51,8 @@ it.
   plain GET link, and a browser prefetching links or a link checker crawling
   wp-admin would have revoked every share on the page with nobody clicking
   anything. Destructive operations are POST bulk actions here for that reason.
+  The row actions the table does have — Edit Draft, and Copy Link as a
+  `button` — change nothing, which is the test for adding another.
 * **Verify the nonce `WP_List_Table` actually emits**, not one of the screen's
   own — `display_tablenav()` prints `_wpnonce` for `bulk-{$plural}` and a second
   field of that name replaces rather than adds (commit `1c615d6`).
@@ -76,6 +79,17 @@ it.
   ordinary form post now.
 * The old page slug embedded the plugin's folder name, so renaming the directory
   broke the screen.
+* **The meta box is posts-only, and that is the URL's fault, not a whim.** The
+  share link is `?p=<id>`, which WordPress answers for the built-in post type
+  alone — a box on pages or custom types would hand out links that 404. It
+  hangs off `add_meta_boxes_post` and `save_post_post`, the typed hooks, and a
+  test pins that the untyped ones are not used.
+* **The meta box's nonce travels in `draftsforfriends_metabox_nonce`.** It sits
+  inside the editor's own form, where a second field named `_wpnonce` would
+  replace the post's nonce rather than sit beside it.
+* **The meta box's save is quiet on refusal.** It runs inside the post's save;
+  `wp_die()` there eats the save with it. `create()` re-checks everything, and
+  the box shows the true state on the screen that loads afterwards.
 
 ## WP-CLI
 
@@ -146,9 +160,9 @@ do not go hunting for it again.
 `test-preview.php` covers the capture/restore logic and the denied statuses;
 `test-multisite.php` the per-site table creation.
 
-## Open question
+## Public hooks are settled
 
-Whether this plugin gains `wp_draftsforfriends_share_created` / `_extended` /
-`_revoked` actions and a `_share_url` filter is deliberately unsettled. It has
-never had public hooks, and new public API cannot be withdrawn once shipped. Do
-not add them unilaterally.
+`wp_draftsforfriends_share_created` / `_extended` / `_revoked` and the
+`_share_url` / `_requested_hash` filter pair shipped in 2.0.0 and are documented
+in the README. They cannot be withdrawn; anything new added to them is public
+API forever, so weigh additions accordingly.

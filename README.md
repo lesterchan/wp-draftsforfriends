@@ -4,7 +4,7 @@ Donate link: https://lesterchan.net/site/donation/
 Tags: friends, preview, drafts, send, share draft  
 Requires at least: 6.8  
 Tested up to: 7.0  
-Stable tag: 2.0.0  
+Stable tag: 2.0.1  
 Requires PHP: 8.2  
 License: GPLv2 or later  
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,6 +25,7 @@ Modified from Drafts for Friends, originally by Neville Longbottom. The plugin i
 * An expiry you choose in seconds, minutes, hours or days, with a default you set once
 * Works for a logged-out visitor with no account
 * Scheduled and pending posts can be shared as well as drafts
+* A box in the post editor that shows the post's links and creates one on save
 * A sortable, paginated list of every link you have out, with the time each has left
 * Extend or revoke links in bulk
 * Comments are forced closed on a shared draft
@@ -44,7 +45,9 @@ There is nothing to configure before you start. Sharing takes the `publish_posts
 ## Usage
 Go to `Posts -> WP-DraftsForFriends`. The page has two tabs, **Shared Drafts** and **Settings**.
 
-Under **Share a Draft**, choose an unpublished post, set how long the link should last, and press **Share Draft**. The link appears in the list below; press **Copy link** to put it on your clipboard and send it to whoever needs it.
+Under **Share a Draft**, choose an unpublished post, set how long the link should last, and press **Share Draft**. The link appears in the list below. Hovering a row shows **Edit Draft**, which opens the post, and **Copy Link**, which puts the link on your clipboard ready to send to whoever needs it.
+
+You can also share from inside the post editor. Every unpublished post has a **Drafts for Friends** box listing its links and the time each has left, each with a **Copy Link** button; tick **Create a share link when this post is saved** and the next save creates one. A published post needs no link — anybody can read it — so the box says only that.
 
 The list shows every link you have out. **Expires After** counts down and then reads `Expired`. Twenty rows are shown at a time, every column except the link is sortable, and *Screen Options* changes how many rows you see.
 
@@ -152,7 +155,7 @@ No. Comments are forced closed on a shared draft.
 No. That is the point of the plugin: the link works for a logged-out visitor, and only for the post it was issued for, and only until it expires.
 
 ### Does the screen need JavaScript?
-No. Sharing, extending and revoking are ordinary form submissions handled on the server, so all three work with JavaScript turned off. The script only adds the **Copy link** button, a warning before you revoke, and catching a missing draft or a nonsense duration before the page reloads.
+No. Sharing, extending and revoking are ordinary form submissions handled on the server, so all three work with JavaScript turned off. The script only adds the copy button, a warning before you revoke, and catching a missing draft or a nonsense duration before the page reloads.
 
 ## Screenshots
 
@@ -161,6 +164,11 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 3. What the friend sees: an unpublished post, with no account and no login
 
 ## Changelog
+
+### 2.0.1
+* NEW: A Drafts for Friends box in the post editor: it lists the post's share links with the time each has left and a Copy Link button for each, and creates a new link when the post is saved with its checkbox ticked. Posts only, because a share link asks for the post as `?p=<id>` and WordPress answers that for posts alone.
+* NEW: An Edit Draft row action on each row of the list, which opens the post the share is for.
+* CHANGED: Copy Link is a row action on the Post column rather than a button appended to the URL, where it landed wherever the link happened to stop wrapping. It is still a button rather than a link, so nothing copies by prefetch.
 
 ### 2.0.0
 * BREAKING: Requires WordPress 6.8 and PHP 8.2.

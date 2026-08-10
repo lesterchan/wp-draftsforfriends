@@ -201,6 +201,36 @@ class WP_DraftsForFriends_Shares {
 	}
 
 	/**
+	 * Every share for one post, scoped to what the current user may see.
+	 *
+	 * The same join and visibility clause as query(), so the meta box and the
+	 * Shared Drafts screen cannot disagree about whose shares somebody is shown.
+	 *
+	 * @since 2.0.1
+	 *
+	 * @param int $post_id Post the shares belong to.
+	 * @return array
+	 */
+	public static function for_post( $post_id ) {
+		global $wpdb;
+
+		$post_id = (int) $post_id;
+
+		if ( 0 >= $post_id ) {
+			return array();
+		}
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT d.*, p.post_title AS post_title FROM {$wpdb->draftsforfriends} d INNER JOIN {$wpdb->posts} p ON d.post_id = p.ID WHERE d.post_id = %d AND ( %d = 1 OR d.user_id = %d ) ORDER BY d.date_created DESC",
+				$post_id,
+				self::sees_every_share(),
+				get_current_user_id()
+			)
+		);
+	}
+
+	/**
 	 * Drop every share for a post that has been deleted for good.
 	 *
 	 * Hooked to deleted_post. Trashing deliberately does not come through here:

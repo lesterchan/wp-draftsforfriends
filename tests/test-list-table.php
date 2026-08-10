@@ -66,7 +66,7 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		);
 	}
 
-	public function test_there_are_no_row_actions() {
+	public function test_no_state_changing_operation_is_a_row_action() {
 		$share = $this->make_share( $this->author_id, $this->draft_id );
 
 		$table = $this->table();
@@ -76,24 +76,28 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$table->single_row( $share );
 		$html = (string) ob_get_clean();
 
-		// The deviation §4.3 asks to be justified: a row action is a GET, and both
-		// operations here change state irreversibly or extend public access.
-		//
-		// Matched on the container core emits, not on the bare word: every primary
-		// column carries the class has-row-actions whether or not there are any,
-		// because that is what positions the show-more toggle on a narrow screen.
-		// A plain substring search finds that and reports a row action that is not
-		// there.
-		$this->assertStringNotContainsString(
-			'<div class="row-actions"',
-			$html,
-			'a row action reappeared; see the class docblock for why there are none'
-		);
-		$this->assertStringContainsString(
-			'has-row-actions',
-			$html,
-			'core stopped emitting the primary-column class this assertion has to tell itself apart from'
-		);
+		// A row action is a GET, and a prefetch of one would revoke a share that
+		// cannot be restored or silently extend public access to an unpublished
+		// post. Both stay bulk actions on a form post; the row actions this
+		// table does have change nothing.
+		$row_actions = $this->row_actions_markup( $html );
+
+		$this->assertNotSame( '', $row_actions, 'The row has actions, so this assertion has something to check.' );
+		$this->assertStringNotContainsStringIgnoringCase( 'extend', $row_actions, 'extending must not be reachable by following a link' );
+		$this->assertStringNotContainsStringIgnoringCase( 'revoke', $row_actions, 'revoking must not be reachable by following a link' );
+		$this->assertStringNotContainsStringIgnoringCase( 'delete', $row_actions, 'deleting must not be reachable by following a link' );
+	}
+
+	/**
+	 * The row-actions container out of a rendered row, or an empty string.
+	 *
+	 * @param string $html A rendered table row.
+	 * @return string
+	 */
+	private function row_actions_markup( $html ) {
+		preg_match( '#<div class="row-actions">(.*?)</div>#s', $html, $matches );
+
+		return isset( $matches[1] ) ? $matches[1] : '';
 	}
 
 	public function test_pagination_is_at_twenty() {
@@ -122,14 +126,62 @@ class WP_DraftsForFriends_List_Table_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertStringNotContainsString( 'Draft <b>Title</b>', $html, 'the post title reached the label unescaped' );
 	}
 
-	public function test_the_link_column_carries_the_share_url_and_a_copy_button() {
+	public function test_the_link_column_carries_the_share_url() {
 		$share = $this->make_share( $this->author_id, $this->draft_id );
 		$html  = $this->table()->column_link( $share );
 
 		$this->assertStringContainsString( 'draftsforfriends=' . $share->hash, $html, 'The link column carries the share URL.' );
-		$this->assertStringContainsString( 'draftsforfriends-copy', $html, 'The link column carries the copy button that reads it.' );
-		$this->assertStringContainsString( 'hide-if-no-js', $html, 'the copy button must not appear where the script has not run' );
+		$this->assertStringNotContainsString( '<button', $html, 'copying moved to a row action; the column is the link alone' );
+	}
+
+	public function test_the_row_actions_are_edit_draft_and_copy_link() {
+		wp_set_current_user( $this->author_id );
+
+		$share = $this->make_share( $this->author_id, $this->draft_id );
+		$html  = $this->table()->column_post_title( $share );
+
+		$this->assertStringContainsString( 'row-actions', $html, 'The actions use core\'s row action markup, so they behave like every other list.' );
+		$this->assertStringContainsString( 'Edit Draft', $html, 'The row links back to the editor.' );
+		$this->assertStringContainsString( 'post=' . $this->draft_id, $html, 'Edit Draft points at the post the share is for.' );
+		$this->assertStringContainsString( 'Copy Link', $html, 'Copying the link is a row action.' );
+		$this->assertStringContainsString( 'draftsforfriends-copy', $html, 'the script finds the copy button by this class' );
 		$this->assertStringContainsString( 'data-link=', $html, 'the script reads the URL from a data attribute' );
+		$this->assertStringContainsString( 'hide-if-no-js', $html, 'the copy button must not appear where the script has not run' );
+	}
+
+	public function test_the_copy_action_is_a_button_and_never_a_link() {
+		wp_set_current_user( $this->author_id );
+
+		$share = $this->make_share( $this->author_id, $this->draft_id );
+		$html  = $this->table()->column_post_title( $share );
+
+		// A prefetched GET must never be able to copy, extend or revoke; the
+		// share URL belongs in a data attribute, not in an href.
+		$this->assertMatchesRegularExpression( '/<button[^>]*draftsforfriends-copy/', $html, 'the copy action must be a button' );
+		$this->assertStringNotContainsString( 'href="' . WP_DraftsForFriends_Shares::url( $share ), $html, 'the share URL must not be an href in the row actions' );
+	}
+
+	public function test_the_row_actions_name_the_post_for_a_screen_reader() {
+		wp_set_current_user( $this->author_id );
+
+		$share = $this->make_share( $this->author_id, $this->draft_id );
+		$html  = $this->table()->column_post_title( $share );
+
+		// Both actions, and not core's own "Show more details" toggle, which
+		// row_actions() appends with a screen-reader-text span of its own.
+		$this->assertSame( 2, substr_count( $html, 'for Draft &lt;b&gt;Title' ), 'Both row actions say which draft they act on.' );
+		$this->assertStringNotContainsString( 'Draft <b>Title</b>', $html, 'the post title reached a row action unescaped' );
+	}
+
+	public function test_edit_draft_is_withheld_from_somebody_who_may_not_edit_the_post() {
+		$share = $this->make_share( $this->author_id, $this->draft_id );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		$html = $this->table()->column_post_title( $share );
+
+		$this->assertStringNotContainsString( 'Edit Draft', $html, 'an Edit link to a post the reader cannot edit only leads to a refusal' );
+		$this->assertStringContainsString( 'Copy Link', $html, 'The copy action does not depend on being able to edit.' );
 	}
 
 	public function test_a_share_that_has_never_been_extended_reads_na() {

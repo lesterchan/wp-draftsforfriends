@@ -339,6 +339,16 @@ class WP_DraftsForFriends_Admin {
 			return;
 		}
 
+		self::enqueue_assets();
+	}
+
+	/**
+	 * The actual enqueue, shared with the post editor's meta box: each screen
+	 * decides whether it is the one being drawn, what loads lives here.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_assets() {
 		/*
 		 * The URLs come from WP_DRAFTSFORFRIENDS_URL, which is derived from the
 		 * main file. Building them from the literal 'wp-draftsforfriends/js/...'
@@ -368,7 +378,7 @@ class WP_DraftsForFriends_Admin {
 				'errorExpires'  => __( 'Please choose a valid duration.', 'wp-draftsforfriends' ),
 				'errorSelect'   => __( 'Please select at least one shared draft.', 'wp-draftsforfriends' ),
 				'confirmRevoke' => __( 'Revoke the selected shared drafts? The links stop working immediately and cannot be restored.', 'wp-draftsforfriends' ),
-				'copy'          => __( 'Copy link', 'wp-draftsforfriends' ),
+				'copy'          => __( 'Copy Link', 'wp-draftsforfriends' ),
 				'copied'        => __( 'Copied!', 'wp-draftsforfriends' ),
 				'copyFailed'    => __( 'Could not copy the link. Select it and copy it by hand.', 'wp-draftsforfriends' ),
 			)

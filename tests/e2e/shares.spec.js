@@ -294,12 +294,14 @@ test.describe( 'Sharing a draft', () => {
 
 		await openShares( page );
 
-		const button = listRow( page, draft.title.raw ).getByRole( 'button', { name: 'Copy link' } );
+		const button = listRow( page, draft.title.raw ).getByRole( 'button', {
+			name: /^Copy Link/,
+		} );
 		await button.click();
 
 		// The far end is what was handed over, not the label: the label says
-		// "Copied!" for two seconds and then goes back to "Copy link", so an
-		// assertion on it is a race with its own timer.
+		// "Copied!" for two seconds and then goes back, so an assertion on it
+		// is a race with its own timer.
 		await expect
 			.poll( () => page.evaluate( () => window.__copied ) )
 			.toContain( share.hash );

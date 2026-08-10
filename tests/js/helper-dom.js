@@ -42,7 +42,7 @@ export function l10n() {
 		errorSelect: 'Please select at least one shared draft.',
 		confirmRevoke:
 			'Revoke the selected shared drafts? The links stop working immediately and cannot be restored.',
-		copy: 'Copy link',
+		copy: 'Copy Link',
 		copied: 'Copied!',
 		copyFailed: 'Could not copy the link. Select it and copy it by hand.',
 	};
@@ -138,11 +138,14 @@ export function rowMarkup( row ) {
 				<input type="checkbox" id="cb-select-${ row.id }" name="shares[]" value="${ row.id }" />
 			</th>
 			<td>${ row.id }</td>
-			<td>${ row.title }</td>
-			<td class="column-link">
-				<a href="${ link }">${ link }</a>
-				<button type="button" class="button hide-if-no-js draftsforfriends-copy" data-link="${ link }">Copy link</button>
+			<td class="column-post_title">
+				${ row.title }
+				<div class="row-actions">
+					<span class="edit"><a href="/wp-admin/post.php?post=4&action=edit">Edit Draft</a></span>
+					<span class="copy"><button type="button" class="button-link hide-if-no-js draftsforfriends-copy" data-link="${ link }">Copy Link</button></span>
+				</div>
 			</td>
+			<td class="column-link"><a href="${ link }">${ link }</a></td>
 		</tr>
 	`;
 }

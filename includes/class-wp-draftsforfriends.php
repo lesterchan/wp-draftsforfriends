@@ -94,6 +94,10 @@ class WP_DraftsForFriends {
 
 			WP_DraftsForFriends_Admin::init();
 			WP_DraftsForFriends_Settings::init();
+
+			// Admin-only holds for the meta box too: even the block editor posts
+			// the box's fields to post.php.
+			WP_DraftsForFriends_Metabox::init();
 		}
 	}
 
@@ -126,6 +130,7 @@ class WP_DraftsForFriends {
 		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-list-table.php';
 		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-admin.php';
 		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-settings.php';
+		require_once WP_DRAFTSFORFRIENDS_DIR . 'includes/class-wp-draftsforfriends-metabox.php';
 	}
 
 	/**

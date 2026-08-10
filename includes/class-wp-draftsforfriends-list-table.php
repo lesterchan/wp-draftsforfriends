@@ -23,19 +23,15 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  * picks up the per-page screen option for free.
  *
  * §4.3 wants pagination at 20, sortable columns, row actions on hover, bulk
- * actions where destructive operations exist and a no_items() message. This
- * table has four of those five, and deliberately has no row actions at all.
+ * actions where destructive operations exist and a no_items() message. All five
+ * are here, but Extend and Revoke are not among the row actions.
  *
- * A row action is a GET. Both things a row of this table offers change state:
- * revoking a share cannot be undone, and extending one silently prolongs public
- * access to a post its author has not published. A browser or a link checker
- * that prefetches would revoke every share on the page, and the author would
- * find out when a friend said the link had stopped working. That is the same
- * reasoning wp-dbmanager recorded for routing its destructive operations through
- * POST bulk actions, and §4.3 allows the deviation with a stated reason.
- *
- * So both operations are bulk actions on a real form post, and the duration
- * Extend uses sits in extra_tablenav() beside them.
+ * A row action is a GET, and both of those change state: revoking cannot be
+ * undone, and extending silently prolongs public access to an unpublished post.
+ * A browser or link checker that prefetches would revoke every share on the
+ * page. So both are bulk actions on a real form post, with Extend's duration in
+ * extra_tablenav() beside them, and the one row action -- Copy Link -- is a
+ * button that changes nothing.
  *
  * @since 2.0.0
  */
@@ -293,13 +289,50 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	}
 
 	/**
-	 * The post title column.
+	 * The post title column, and its row actions.
+	 *
+	 * Both change nothing, which is why this table may have them at all: Edit
+	 * Draft opens the editor, and Copy Link is a `button` rather than a link so
+	 * nothing follows it by prefetching. The screen-reader suffixes name the
+	 * post, because a column of identical "Edit Draft" links says nothing about
+	 * which draft.
 	 *
 	 * @param object $item Share row.
 	 * @return string
 	 */
 	public function column_post_title( $item ) {
-		return esc_html( $item->post_title );
+		$actions = array();
+
+		$edit = get_edit_post_link( $item->post_id );
+
+		if ( $edit ) {
+			$actions['edit'] = sprintf(
+				'<a href="%1$s">%2$s<span class="screen-reader-text"> %3$s</span></a>',
+				esc_url( $edit ),
+				esc_html__( 'Edit Draft', 'wp-draftsforfriends' ),
+				esc_html( $this->for_post_title( $item ) )
+			);
+		}
+
+		$actions['copy'] = sprintf(
+			'<button type="button" class="button-link hide-if-no-js draftsforfriends-copy" data-link="%1$s">%2$s<span class="screen-reader-text"> %3$s</span></button>',
+			esc_url( WP_DraftsForFriends_Shares::url( $item ) ),
+			esc_html__( 'Copy Link', 'wp-draftsforfriends' ),
+			esc_html( $this->for_post_title( $item ) )
+		);
+
+		return esc_html( $item->post_title ) . $this->row_actions( $actions );
+	}
+
+	/**
+	 * The "for <post>" suffix a row action's accessible name carries.
+	 *
+	 * @param object $item Share row.
+	 * @return string
+	 */
+	private function for_post_title( $item ) {
+		/* translators: %s: post title. */
+		return sprintf( __( 'for %s', 'wp-draftsforfriends' ), $item->post_title );
 	}
 
 	/**
@@ -327,13 +360,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	}
 
 	/**
-	 * The share link, and a button to copy it.
-	 *
-	 * Copying is the one thing anybody actually does with this column -- the
-	 * point of the plugin is to send the link to somebody -- and it is the only
-	 * control on the screen that changes nothing, so it is also the only one that
-	 * may be a script-only affordance. hide-if-no-js keeps it off the page where
-	 * the script has not run, leaving the link itself to be selected by hand.
+	 * The share link. Copying it is the row action on the Post column.
 	 *
 	 * @param object $item Share row.
 	 * @return string
@@ -341,12 +368,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	public function column_link( $item ) {
 		$url = WP_DraftsForFriends_Shares::url( $item );
 
-		return sprintf(
-			'<a href="%1$s">%2$s</a> <button type="button" class="button hide-if-no-js draftsforfriends-copy" data-link="%1$s">%3$s</button>',
-			esc_url( $url ),
-			esc_html( $url ),
-			esc_html__( 'Copy link', 'wp-draftsforfriends' )
-		);
+		return sprintf( '<a href="%1$s">%2$s</a>', esc_url( $url ), esc_html( $url ) );
 	}
 
 	/**
