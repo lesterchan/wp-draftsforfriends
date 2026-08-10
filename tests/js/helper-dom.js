@@ -93,8 +93,8 @@ export function screenMarkup( rows = [] ) {
 				<div class="tablenav top">
 					<select name="action" id="bulk-action-selector-top">
 						<option value="-1">Bulk actions</option>
-						<option value="extend">Extend selected</option>
-						<option value="revoke">Revoke selected</option>
+						<option value="extend">Extend Selected</option>
+						<option value="revoke">Revoke Selected</option>
 					</select>
 					<input type="submit" id="doaction" class="button action" value="Apply" />
 					<div class="alignleft actions">
@@ -110,8 +110,8 @@ export function screenMarkup( rows = [] ) {
 				<div class="tablenav bottom">
 					<select name="action2" id="bulk-action-selector-bottom">
 						<option value="-1">Bulk actions</option>
-						<option value="extend">Extend selected</option>
-						<option value="revoke">Revoke selected</option>
+						<option value="extend">Extend Selected</option>
+						<option value="revoke">Revoke Selected</option>
 					</select>
 					<input type="submit" id="doaction2" class="button action" value="Apply" />
 				</div>

@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Every subcommand goes through WP_DraftsForFriends_Shares, which is the same
  * class the screen under Posts uses, so the four things offered here are the
  * four things that screen offers and nothing more: the list, the Share a Draft
- * form, and the Extend selected and Revoke selected bulk actions. The Settings
+ * form, and the Extend Selected and Revoke Selected bulk actions. The Settings
  * tab is deliberately absent -- it is one option row, which `wp option` already
  * reads and writes, and a second way to set a default duration is a second place
  * for it to be wrong.
@@ -186,7 +186,7 @@ class WP_DraftsForFriends_Command extends WP_CLI_Command {
 	/**
 	 * Push the expiry of one or more shares further out.
 	 *
-	 * The same arithmetic the Extend selected bulk action uses: a share that has
+	 * The same arithmetic the Extend Selected bulk action uses: a share that has
 	 * not expired yet gains the duration on top of what it had, and one that has
 	 * already expired starts again from now, so extending it by an hour gives an
 	 * hour rather than a moment in the past.

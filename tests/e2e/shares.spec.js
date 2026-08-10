@@ -71,7 +71,9 @@ test.describe( 'Sharing a draft', () => {
 
 		expect( hash ).toHaveLength( 32 );
 
-		const link = listRow( page, draft.title.raw ).getByRole( 'link' );
+		// The Link column, not any link in the row: the Edit Draft row action is
+		// one too, and it points at the editor rather than at the friend's copy.
+		const link = listRow( page, draft.title.raw ).locator( '.column-link a' );
 		await expect( link ).toHaveAttribute( 'href', new RegExp( `p=${ draft.id }` ) );
 		await expect( link ).toHaveAttribute( 'href', new RegExp( `draftsforfriends=${ hash }` ) );
 	} );
@@ -294,9 +296,13 @@ test.describe( 'Sharing a draft', () => {
 
 		await openShares( page );
 
-		const button = listRow( page, draft.title.raw ).getByRole( 'button', {
-			name: /^Copy Link/,
-		} );
+		// Hovered first, because that is the only way a person reaches it: core
+		// parks a row action at left: -9999em until its row is hovered or
+		// something in it takes focus, and a click on it there never lands.
+		const row = listRow( page, draft.title.raw );
+		await row.hover();
+
+		const button = row.getByRole( 'button', { name: /^Copy Link/ } );
 		await button.click();
 
 		// The far end is what was handed over, not the label: the label says

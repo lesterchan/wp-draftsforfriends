@@ -121,8 +121,8 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	 */
 	protected function get_bulk_actions() {
 		return array(
-			'extend' => __( 'Extend selected', 'wp-draftsforfriends' ),
-			'revoke' => __( 'Revoke selected', 'wp-draftsforfriends' ),
+			'extend' => __( 'Extend Selected', 'wp-draftsforfriends' ),
+			'revoke' => __( 'Revoke Selected', 'wp-draftsforfriends' ),
 		);
 	}
 
