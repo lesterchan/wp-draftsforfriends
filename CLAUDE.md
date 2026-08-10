@@ -15,8 +15,8 @@ who has no account. One page with two tabs under **Posts**: `Shared Drafts` (a
 * `wp_draftsforfriends_options` (default share duration) and
   `wp_draftsforfriends_version` (the `plugin` and `db` upgrade markers, kept out
   of the settings array because the settings form never posts one). The
-  migration folds in `draftsforfriends_db_version`, which only the unreleased
-  2.0.0 work wrote.
+  migration folds in `draftsforfriends_db_version`, which only pre-release
+  2.0.0 builds wrote.
 * `uninstall.php` **drops the table**, which changes how the uninstall test has
   to be written: `run_uninstall()` performs the deletions itself and a separate
   test asserts `uninstall.php` names the same rows and delegates the drop. Do
