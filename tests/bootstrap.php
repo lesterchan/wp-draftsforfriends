@@ -12,17 +12,23 @@ if ( ! $_tests_dir ) {
 	$_tests_dir = '/wordpress-phpunit';
 }
 
+if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
+	echo "Could not find the WordPress test library at {$_tests_dir}." . PHP_EOL;
+	echo 'Run the suite through bin/test.sh, or set WP_TESTS_DIR.' . PHP_EOL;
+	exit( 1 );
+}
+
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
  * Load the plugin under test.
+ *
+ * @return void
  */
-tests_add_filter(
-	'muplugins_loaded',
-	function () {
-		require dirname( __DIR__ ) . '/wp-draftsforfriends.php';
-	}
-);
+function _wp_draftsforfriends_manually_load_plugin() {
+	require dirname( __DIR__ ) . '/wp-draftsforfriends.php';
+}
+tests_add_filter( 'muplugins_loaded', '_wp_draftsforfriends_manually_load_plugin' );
 
 /**
  * Keep the suite off the network.
