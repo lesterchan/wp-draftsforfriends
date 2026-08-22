@@ -5,9 +5,7 @@
  * @package WP-DraftsForFriends
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Lists, creates, extends and revokes shared drafts from the command line.

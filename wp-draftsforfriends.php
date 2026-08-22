@@ -34,9 +34,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+defined( 'ABSPATH' ) || exit;
 
 /*
  * WP_DRAFTSFORFRIENDS_DIR and WP_DRAFTSFORFRIENDS_URL are derived from __FILE__
