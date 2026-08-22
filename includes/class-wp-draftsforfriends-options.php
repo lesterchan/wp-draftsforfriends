@@ -98,11 +98,10 @@ class WP_DraftsForFriends_Options {
 	 * nothing at all, the row is never created, and the markers are stamped
 	 * complete either way, so the upgrade can never run again.
 	 *
-	 * It was held off by nothing but the order two callbacks were added in:
-	 * `maybe_upgrade()` is hooked to `admin_init` before `Settings::init()` hooks
-	 * `register_settings()` to it at the same priority, so the upgrade went first.
-	 * Reordering those two, or any third-party `default_option_*` filter, reaches
-	 * it silently.
+	 * It was held off by nothing but hook order: `maybe_upgrade()` runs on
+	 * `init` while `Settings::init()` hooks `register()` to the later
+	 * `admin_init`, so the upgrade goes first. Reordering those two, or any
+	 * third-party `default_option_*` filter, reaches it silently.
 	 *
 	 * Passing an explicit default to `get_option()` defeats the registered one --
 	 * `filter_default_option()` returns early when a default was passed -- which

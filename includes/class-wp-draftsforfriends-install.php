@@ -49,19 +49,17 @@ class WP_DraftsForFriends_Install {
 	/**
 	 * Bring the current site, or every site on a network, up to date.
 	 *
-	 * @param bool $network_wide Whether the plugin is being network activated.
+	 * @param bool $network_wide Whether the plugin is being activated network-wide.
 	 * @return void
 	 */
-	public static function activate( $network_wide ) {
+	public static function activate( $network_wide = false ) {
 		if ( ! is_multisite() || ! $network_wide ) {
 			self::maybe_upgrade();
 
 			return;
 		}
 
-		// get_sites(), not the deprecated wp_get_sites(), which is capped at 100.
-		// get_sites() defaults 'number' to 100 too, so it is lifted explicitly or
-		// every site past the hundredth silently goes without its table.
+		// 'number' => 0 lifts WP_Site_Query's default cap of 100, which would otherwise skip every site past the hundredth while reporting success.
 		$site_ids = get_sites(
 			array(
 				'fields' => 'ids',
@@ -70,12 +68,11 @@ class WP_DraftsForFriends_Install {
 		);
 
 		foreach ( $site_ids as $site_id ) {
+			// Inside the loop: switch_to_blog() pushes onto a stack, so restoring once after the loop unwinds it by exactly one.
 			switch_to_blog( (int) $site_id );
 
 			self::maybe_upgrade();
 
-			// Inside the loop: switch_to_blog() pushes onto a stack, so one
-			// restore after the loop leaves it unwound by all but one.
 			restore_current_blog();
 		}
 	}
@@ -83,10 +80,9 @@ class WP_DraftsForFriends_Install {
 	/**
 	 * Bring the stored rows and the table up to date with the running code.
 	 *
-	 * Runs on activation and on every admin load, because activation hooks do
-	 * not fire when a plugin is updated -- which is the usual reason a migration
-	 * never runs at all. Idempotent, and a single option read once everything is
-	 * current.
+	 * Runs on activation and on every load. Activation does not fire on a
+	 * plugin update, which is the single most common reason a migration never
+	 * runs. Idempotent, and a single option read once everything is current.
 	 *
 	 * Both markers are written together in one update_option() at the very end,
 	 * so a half-finished upgrade never records itself as complete.

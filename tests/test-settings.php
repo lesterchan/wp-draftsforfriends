@@ -69,7 +69,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	public function test_registration_registers_the_setting_the_section_and_the_field() {
 		global $wp_settings_sections, $wp_settings_fields, $wp_registered_settings;
 
-		WP_DraftsForFriends_Settings::register_settings();
+		WP_DraftsForFriends_Settings::register();
 
 		$page = WP_DraftsForFriends_Settings::PAGE;
 
@@ -197,7 +197,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	public function test_only_one_tab_owns_settings_so_a_save_cannot_wipe_another() {
 		global $wp_settings_sections, $wp_settings_fields;
 
-		WP_DraftsForFriends_Settings::register_settings();
+		WP_DraftsForFriends_Settings::register();
 
 		/*
 		 * §4.2.1's data-destroying trap: register_setting()'s sanitize_callback is
@@ -240,7 +240,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 		wp_set_current_user( $user_id );
 		update_user_meta( $user_id, 'wp_draftsforfriends_per_page', 5 );
 
-		WP_DraftsForFriends_Settings::register_settings();
+		WP_DraftsForFriends_Settings::register();
 
 		// The whole settings form, as the browser posts it.
 		WP_DraftsForFriends_Options::update(
@@ -307,7 +307,7 @@ class WP_DraftsForFriends_Settings_Test extends WP_DraftsForFriends_TestCase {
 	public function test_a_round_trip_through_the_screen_stores_a_clean_row() {
 		wp_set_current_user( $this->create_admin() );
 
-		WP_DraftsForFriends_Settings::register_settings();
+		WP_DraftsForFriends_Settings::register();
 
 		// What options.php does with the form: hand the posted array to the
 		// registered sanitiser, then store the result.

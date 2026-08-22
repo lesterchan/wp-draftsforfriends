@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  * The plugin has one admin page under Posts, with two flat tabs: Shared Drafts
  * and Settings. It does one thing -- share a post with somebody -- and its list
  * is a list of shared posts, so it belongs where WordPress keeps post-scoped
- * tools. See admin_menu() for why that is not a top-level menu, and render_page()
+ * tools. See add_page() for why that is not a top-level menu, and render_page()
  * for the capability arrangement the tabs need.
  *
  * Every path here works with JavaScript turned off. The add form and both bulk
@@ -128,7 +128,7 @@ class WP_DraftsForFriends_Admin {
 	 * @return void
 	 */
 	public static function init() {
-		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+		add_action( 'admin_menu', array( __CLASS__, 'add_page' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'admin_enqueue_scripts' ) );
 		add_filter( 'set-screen-option', array( __CLASS__, 'save_screen_option' ), 10, 3 );
 	}
@@ -187,7 +187,7 @@ class WP_DraftsForFriends_Admin {
 	 *
 	 * @return void
 	 */
-	public static function admin_menu() {
+	public static function add_page() {
 		self::$hook_suffix = add_posts_page(
 			__( 'Drafts for Friends', 'wp-draftsforfriends' ),
 			__( 'WP-DraftsForFriends', 'wp-draftsforfriends' ),

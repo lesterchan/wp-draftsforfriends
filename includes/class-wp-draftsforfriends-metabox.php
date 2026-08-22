@@ -31,7 +31,7 @@ class WP_DraftsForFriends_Metabox {
 	 *
 	 * @var string
 	 */
-	const NONCE = 'wp_draftsforfriends_metabox';
+	const NONCE_ACTION = 'wp_draftsforfriends_metabox';
 
 	/**
 	 * The field the nonce travels in. Not _wpnonce: inside the editor's form a
@@ -165,7 +165,7 @@ class WP_DraftsForFriends_Metabox {
 		$expires = (int) WP_DraftsForFriends_Options::get( 'expires' );
 		$measure = (string) WP_DraftsForFriends_Options::get( 'measure' );
 
-		wp_nonce_field( self::NONCE, self::NONCE_FIELD );
+		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
 		?>
 		<p>
 			<label for="draftsforfriends-metabox-create">
@@ -202,7 +202,7 @@ class WP_DraftsForFriends_Metabox {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST[ self::NONCE_FIELD ] ) ), self::NONCE ) ) {
+		if ( ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST[ self::NONCE_FIELD ] ) ), self::NONCE_ACTION ) ) {
 			return;
 		}
 

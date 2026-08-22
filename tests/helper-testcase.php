@@ -142,7 +142,7 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 		$GLOBALS['menu']    = array();
 		$GLOBALS['submenu'] = array();
 
-		WP_DraftsForFriends_Admin::admin_menu();
+		WP_DraftsForFriends_Admin::add_page();
 
 		$this->admin_hook_suffix = WP_DraftsForFriends_Admin::get_hook_suffix();
 
@@ -230,7 +230,7 @@ abstract class WP_DraftsForFriends_TestCase extends WP_UnitTestCase {
 	 * @return string The rendered markup.
 	 */
 	protected function render_settings_page() {
-		WP_DraftsForFriends_Settings::register_settings();
+		WP_DraftsForFriends_Settings::register();
 
 		return $this->render_admin_page( array( 'tab' => WP_DraftsForFriends_Admin::TAB_SETTINGS ) );
 	}

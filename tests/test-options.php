@@ -143,7 +143,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	public function test_update_creates_the_row_when_the_value_equals_the_registered_default() {
 		delete_option( WP_DraftsForFriends_Options::OPTION );
 
-		WP_DraftsForFriends_Settings::register_settings();
+		WP_DraftsForFriends_Settings::register();
 
 		// The precondition the defect needs: a bare read of an absent row answers
 		// with the defaults, so update_option() alone compares equal and declines
@@ -170,7 +170,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	 * @return void
 	 */
 	public function test_the_shipped_defaults_survive_sanitisation_unchanged() {
-		WP_DraftsForFriends_Settings::register_settings();
+		WP_DraftsForFriends_Settings::register();
 
 		$defaults = WP_DraftsForFriends_Options::get_defaults();
 

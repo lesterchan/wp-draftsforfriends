@@ -170,6 +170,7 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 * NEW: An Edit Draft row action on each row of the list, which opens the post the share is for.
 * CHANGED: Copy Link is a row action on the Post column rather than a button appended to the URL, where it landed wherever the link happened to stop wrapping. It is still a button rather than a link, so nothing copies by prefetch.
 * CHANGED: The bulk actions read Extend Selected and Revoke Selected, which is the case WordPress uses for a control you act on. They do the same thing they did.
+* CHANGED: The upgrade check runs on `init` rather than `admin_init`, so an update applied by cron or WP-CLI is migrated on the site's next request rather than waiting for somebody to open wp-admin.
 
 ### 2.0.0
 * BREAKING: Requires WordPress 6.8 and PHP 8.2.

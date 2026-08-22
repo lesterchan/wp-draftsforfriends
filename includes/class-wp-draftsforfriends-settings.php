@@ -84,7 +84,7 @@ class WP_DraftsForFriends_Settings {
 	 * @return void
 	 */
 	public static function init() {
-		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
+		add_action( 'admin_init', array( __CLASS__, 'register' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( WP_DRAFTSFORFRIENDS_MAIN_FILE ), array( __CLASS__, 'action_links' ) );
 
 		/*
@@ -123,7 +123,7 @@ class WP_DraftsForFriends_Settings {
 	 *
 	 * @return void
 	 */
-	public static function register_settings() {
+	public static function register() {
 		register_setting(
 			self::GROUP,
 			WP_DraftsForFriends_Options::OPTION,

@@ -144,7 +144,7 @@ hardcoded. So what an upgrade has to get right is narrow and sharp, and
   rather than a tidy set of rows.
 
 Activation hooks do not fire on a plugin update, so `maybe_upgrade()` also hangs
-off `admin_init`; that is the path every real upgrade takes.
+off `init` at priority 5; that is the path every real upgrade takes.
 
 ## Tests
 

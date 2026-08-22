@@ -52,7 +52,7 @@ class WP_DraftsForFriends_Metabox_Test extends WP_DraftsForFriends_TestCase {
 	private function valid_save_request( array $fields = array() ) {
 		return array_merge(
 			array(
-				WP_DraftsForFriends_Metabox::NONCE_FIELD => wp_create_nonce( WP_DraftsForFriends_Metabox::NONCE ),
+				WP_DraftsForFriends_Metabox::NONCE_FIELD => wp_create_nonce( WP_DraftsForFriends_Metabox::NONCE_ACTION ),
 				'draftsforfriends_create'                => '1',
 				'draftsforfriends_expires'               => 3,
 				'draftsforfriends_measure'               => 'd',
