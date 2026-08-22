@@ -79,7 +79,7 @@ class WP_DraftsForFriends_Settings {
 	const SECTION_SHARE = 'wp_draftsforfriends_share';
 
 	/**
-	 * Hook the settings screen into WordPress.
+	 * Hook registration.
 	 *
 	 * @return void
 	 */
@@ -115,7 +115,7 @@ class WP_DraftsForFriends_Settings {
 	 */
 	public static function capability( $context = 'settings' ) {
 		/** This filter is documented in includes/class-wp-draftsforfriends-admin.php */
-		return apply_filters( 'wp_draftsforfriends_capability', self::CAPABILITY, $context );
+		return (string) apply_filters( 'wp_draftsforfriends_capability', self::CAPABILITY, $context );
 	}
 
 	/**

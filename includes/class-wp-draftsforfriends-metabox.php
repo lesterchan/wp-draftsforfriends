@@ -42,7 +42,7 @@ class WP_DraftsForFriends_Metabox {
 	const NONCE_FIELD = 'draftsforfriends_metabox_nonce';
 
 	/**
-	 * Hook the box into the editor.
+	 * Hook registration.
 	 *
 	 * @return void
 	 */

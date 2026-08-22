@@ -34,7 +34,7 @@ class WP_DraftsForFriends {
 	}
 
 	/**
-	 * Initializes the plugin object and returns its instance.
+	 * Get the instance, creating it on first call.
 	 *
 	 * @return WP_DraftsForFriends
 	 */

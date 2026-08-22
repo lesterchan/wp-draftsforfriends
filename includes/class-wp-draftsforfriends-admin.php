@@ -123,7 +123,7 @@ class WP_DraftsForFriends_Admin {
 	private static $groups = null;
 
 	/**
-	 * Hook the screen into WordPress.
+	 * Hook registration.
 	 *
 	 * @return void
 	 */
@@ -146,7 +146,7 @@ class WP_DraftsForFriends_Admin {
 	 */
 	public static function capability( $context = 'shares' ) {
 		/**
-		 * Filters the capability required to reach WP-DraftsForFriends.
+		 * Filters the capability required to reach a WP-DraftsForFriends screen.
 		 *
 		 * The default is publish_posts for the shared drafts screen and
 		 * manage_options for the settings screen. Everything the shared drafts
@@ -155,10 +155,10 @@ class WP_DraftsForFriends_Admin {
 		 *
 		 * @since 2.0.0
 		 *
-		 * @param string $capability Capability required.
+		 * @param string $capability The required capability.
 		 * @param string $context    What is being gated: 'shares' or 'settings'.
 		 */
-		return apply_filters( 'wp_draftsforfriends_capability', self::CAPABILITY, $context );
+		return (string) apply_filters( 'wp_draftsforfriends_capability', self::CAPABILITY, $context );
 	}
 
 	/**
