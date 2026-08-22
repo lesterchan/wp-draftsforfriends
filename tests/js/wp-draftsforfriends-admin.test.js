@@ -15,7 +15,7 @@ import {
 	noticeText,
 	rowMarkup,
 	screenMarkup,
-} from './helper-dom.js';
+} from './helpers.js';
 
 /**
  * Fire a cancelable submit at a form and report whether it was blocked.
