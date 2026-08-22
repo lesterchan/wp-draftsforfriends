@@ -158,4 +158,25 @@ class WP_DraftsForFriends_Multisite_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertFalse( ms_is_switched(), 'The blog stack was left switched.' );
 		$this->assertSame( $original, get_current_blog_id(), 'The original site is no longer current.' );
 	}
+
+	/**
+	 * Activating for one site does not touch the rest of the network.
+	 *
+	 * @return void
+	 */
+	public function test_single_site_activation_leaves_other_sites_alone() {
+		$other = $this->make_site();
+
+		switch_to_blog( $other );
+		delete_option( WP_DraftsForFriends_Options::VERSION );
+		restore_current_blog();
+
+		WP_DraftsForFriends_Install::activate( false );
+
+		switch_to_blog( $other );
+		$versions = WP_DraftsForFriends_Options::get_versions();
+		restore_current_blog();
+
+		$this->assertNotSame( WP_DRAFTSFORFRIENDS_VERSION, $versions['plugin'], 'A per-site activation migrated other sites.' );
+	}
 }
