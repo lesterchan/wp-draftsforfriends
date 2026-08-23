@@ -556,12 +556,12 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->register_admin_menu();
 
-		WP_DraftsForFriends_Admin::admin_enqueue_scripts( 'edit.php' );
+		WP_DraftsForFriends_Admin::enqueue( 'edit.php' );
 
 		$this->assertFalse( wp_script_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the script loaded on an unrelated screen' );
 		$this->assertFalse( wp_style_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the stylesheet loaded on an unrelated screen' );
 
-		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
+		WP_DraftsForFriends_Admin::enqueue( $this->admin_hook_suffix );
 
 		$this->assertTrue( wp_script_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the script did not load on its own screen' );
 		$this->assertTrue( wp_style_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the stylesheet did not load on its own screen' );
@@ -572,7 +572,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->register_admin_menu();
 
-		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
+		WP_DraftsForFriends_Admin::enqueue( $this->admin_hook_suffix );
 
 		$this->assertSame(
 			WP_DRAFTSFORFRIENDS_URL . 'js/wp-draftsforfriends-admin.js',
@@ -592,7 +592,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->register_admin_menu();
 
-		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
+		WP_DraftsForFriends_Admin::enqueue( $this->admin_hook_suffix );
 
 		$data = (string) wp_scripts()->get_data( 'wp-draftsforfriends-admin', 'data' );
 

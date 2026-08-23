@@ -58,7 +58,7 @@ class WP_DraftsForFriends_Options {
 	 *
 	 * @return array
 	 */
-	public static function get_defaults() {
+	public static function defaults() {
 		return array(
 			'expires' => 2,
 			'measure' => 'h',
@@ -76,7 +76,7 @@ class WP_DraftsForFriends_Options {
 	 */
 	public static function get( $key = null ) {
 		$stored  = get_option( self::OPTION, array() );
-		$options = wp_parse_args( is_array( $stored ) ? $stored : array(), self::get_defaults() );
+		$options = wp_parse_args( is_array( $stored ) ? $stored : array(), self::defaults() );
 
 		if ( null === $key ) {
 			return $options;
@@ -125,7 +125,7 @@ class WP_DraftsForFriends_Options {
 	 *
 	 * @return array The 'plugin' and 'db' markers, each an empty string when unset.
 	 */
-	public static function get_versions() {
+	public static function markers() {
 		$stored = get_option( self::VERSION, array() );
 
 		if ( ! is_array( $stored ) ) {
@@ -161,7 +161,7 @@ class WP_DraftsForFriends_Options {
 	 * @return array
 	 */
 	public static function sanitize( $input ) {
-		$defaults = self::get_defaults();
+		$defaults = self::defaults();
 
 		if ( ! is_array( $input ) ) {
 			return $defaults;

@@ -93,7 +93,7 @@ class WP_DraftsForFriends_Multisite_Test extends WP_DraftsForFriends_TestCase {
 		WP_DraftsForFriends_Install::activate( true );
 
 		switch_to_blog( $other );
-		$versions = WP_DraftsForFriends_Options::get_versions();
+		$versions = WP_DraftsForFriends_Options::markers();
 		restore_current_blog();
 
 		$this->assertSame( WP_DRAFTSFORFRIENDS_VERSION, $versions['plugin'], 'network activation left a site unmigrated' );
@@ -174,7 +174,7 @@ class WP_DraftsForFriends_Multisite_Test extends WP_DraftsForFriends_TestCase {
 		WP_DraftsForFriends_Install::activate( false );
 
 		switch_to_blog( $other );
-		$versions = WP_DraftsForFriends_Options::get_versions();
+		$versions = WP_DraftsForFriends_Options::markers();
 		restore_current_blog();
 
 		$this->assertNotSame( WP_DRAFTSFORFRIENDS_VERSION, $versions['plugin'], 'A per-site activation migrated other sites.' );

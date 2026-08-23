@@ -16,7 +16,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 				'expires' => 2,
 				'measure' => 'h',
 			),
-			WP_DraftsForFriends_Options::get_defaults(),
+			WP_DraftsForFriends_Options::defaults(),
 			'the shipped default is not the two hours the form used to hardcode'
 		);
 	}
@@ -38,7 +38,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	public function test_get_survives_a_row_that_is_not_an_array() {
 		update_option( WP_DraftsForFriends_Options::OPTION, 'nonsense' );
 
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::get(), 'A row that is not an array falls back to the defaults rather than propagating.' );
+		$this->assertSame( WP_DraftsForFriends_Options::defaults(), WP_DraftsForFriends_Options::get(), 'A row that is not an array falls back to the defaults rather than propagating.' );
 	}
 
 	public function test_get_returns_one_key_or_null_for_an_unknown_one() {
@@ -54,7 +54,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 		$this->assertNull( WP_DraftsForFriends_Options::get( 'no_such_key' ), 'An unknown key reads back null rather than raising a notice.' );
 	}
 
-	public function test_get_versions_reports_empty_strings_before_anything_is_written() {
+	public function test_markers_report_empty_strings_before_anything_is_written() {
 		delete_option( WP_DraftsForFriends_Options::VERSION );
 
 		$this->assertSame(
@@ -62,12 +62,12 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 				'plugin' => '',
 				'db'     => '',
 			),
-			WP_DraftsForFriends_Options::get_versions(),
+			WP_DraftsForFriends_Options::markers(),
 			'an absent version row must read as two empty markers, not as a missing key'
 		);
 	}
 
-	public function test_get_versions_survives_a_row_that_is_not_an_array() {
+	public function test_markers_survive_a_row_that_is_not_an_array() {
 		update_option( WP_DraftsForFriends_Options::VERSION, '2.0.0' );
 
 		$this->assertSame(
@@ -75,7 +75,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 				'plugin' => '',
 				'db'     => '',
 			),
-			WP_DraftsForFriends_Options::get_versions(),
+			WP_DraftsForFriends_Options::markers(),
 			'A version row that is not an array falls back to empty markers rather than propagating.'
 		);
 	}
@@ -97,8 +97,8 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	}
 
 	public function test_the_sanitiser_answers_a_non_array_with_the_defaults() {
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( 'nonsense' ), 'A non-array is answered with the defaults rather than stored.' );
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( null ), 'Null is answered with the defaults too.' );
+		$this->assertSame( WP_DraftsForFriends_Options::defaults(), WP_DraftsForFriends_Options::sanitize( 'nonsense' ), 'A non-array is answered with the defaults rather than stored.' );
+		$this->assertSame( WP_DraftsForFriends_Options::defaults(), WP_DraftsForFriends_Options::sanitize( null ), 'Null is answered with the defaults too.' );
 	}
 
 	public function test_the_sanitiser_reads_nothing_back_out_of_the_database() {
@@ -112,7 +112,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 		// Posting nothing must clean to the defaults rather than to what is
 		// stored: a sanitiser that reached for get_option() would return 6/d here,
 		// and that reaching back is exactly what §2.1 exists to prevent.
-		$this->assertSame( WP_DraftsForFriends_Options::get_defaults(), WP_DraftsForFriends_Options::sanitize( array() ), 'The sanitiser is a pure function of what was posted; it reads no stored value.' );
+		$this->assertSame( WP_DraftsForFriends_Options::defaults(), WP_DraftsForFriends_Options::sanitize( array() ), 'The sanitiser is a pure function of what was posted; it reads no stored value.' );
 	}
 
 	public function test_update_replaces_the_row_rather_than_merging_into_it() {
@@ -149,12 +149,12 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 		// with the defaults, so update_option() alone compares equal and declines
 		// to write. Core's add_option() fallback sits below that comparison.
 		$this->assertSame(
-			WP_DraftsForFriends_Options::get_defaults(),
+			WP_DraftsForFriends_Options::defaults(),
 			get_option( WP_DraftsForFriends_Options::OPTION ),
 			'the registered default is what an absent row reads back as'
 		);
 
-		$this->assertTrue( WP_DraftsForFriends_Options::update( WP_DraftsForFriends_Options::get_defaults() ), 'update() reports that it wrote' );
+		$this->assertTrue( WP_DraftsForFriends_Options::update( WP_DraftsForFriends_Options::defaults() ), 'update() reports that it wrote' );
 		$this->assertIsArray( get_option( WP_DraftsForFriends_Options::OPTION, false ), 'and the row is really there, read raw' );
 	}
 
@@ -172,7 +172,7 @@ class WP_DraftsForFriends_Options_Test extends WP_DraftsForFriends_TestCase {
 	public function test_the_shipped_defaults_survive_sanitisation_unchanged() {
 		WP_DraftsForFriends_Settings::register();
 
-		$defaults = WP_DraftsForFriends_Options::get_defaults();
+		$defaults = WP_DraftsForFriends_Options::defaults();
 
 		$this->assertSame(
 			$defaults,

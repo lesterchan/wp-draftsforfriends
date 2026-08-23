@@ -90,7 +90,7 @@ class WP_DraftsForFriends_Install {
 	 * @return void
 	 */
 	public static function maybe_upgrade() {
-		$versions = WP_DraftsForFriends_Options::get_versions();
+		$versions = WP_DraftsForFriends_Options::markers();
 
 		if ( WP_DRAFTSFORFRIENDS_VERSION === $versions['plugin'] && WP_DRAFTSFORFRIENDS_DB_VERSION === $versions['db'] ) {
 			return;
@@ -149,7 +149,7 @@ class WP_DraftsForFriends_Install {
 			// A fresh install, or any site upgrading from a released version.
 			// Write the defaults once rather than leaving the row absent and
 			// merging them on every read forever.
-			add_option( WP_DraftsForFriends_Options::OPTION, WP_DraftsForFriends_Options::get_defaults() );
+			add_option( WP_DraftsForFriends_Options::OPTION, WP_DraftsForFriends_Options::defaults() );
 
 			return;
 		}

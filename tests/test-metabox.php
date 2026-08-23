@@ -226,7 +226,7 @@ class WP_DraftsForFriends_Metabox_Test extends WP_DraftsForFriends_TestCase {
 		wp_set_current_user( $this->author_id );
 		set_current_screen( 'post' );
 
-		WP_DraftsForFriends_Metabox::admin_enqueue_scripts( 'post.php' );
+		WP_DraftsForFriends_Metabox::enqueue( 'post.php' );
 
 		$this->assertTrue( wp_script_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'The copy button is dead without its script.' );
 		$this->assertTrue( wp_style_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'The box\'s links wrap through the plugin stylesheet.' );
@@ -236,12 +236,12 @@ class WP_DraftsForFriends_Metabox_Test extends WP_DraftsForFriends_TestCase {
 		wp_set_current_user( $this->author_id );
 
 		set_current_screen( 'page' );
-		WP_DraftsForFriends_Metabox::admin_enqueue_scripts( 'post.php' );
+		WP_DraftsForFriends_Metabox::enqueue( 'post.php' );
 
 		$this->assertFalse( wp_script_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the page editor has no box, so it must not load the script' );
 
 		set_current_screen( 'post' );
-		WP_DraftsForFriends_Metabox::admin_enqueue_scripts( 'edit.php' );
+		WP_DraftsForFriends_Metabox::enqueue( 'edit.php' );
 
 		$this->assertFalse( wp_script_is( 'wp-draftsforfriends-admin', 'enqueued' ), 'the posts list is not the editor' );
 	}

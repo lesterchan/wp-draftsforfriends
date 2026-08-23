@@ -130,7 +130,7 @@ class WP_DraftsForFriends_Settings {
 			array(
 				'type'              => 'array',
 				'sanitize_callback' => array( 'WP_DraftsForFriends_Options', 'sanitize' ),
-				'default'           => WP_DraftsForFriends_Options::get_defaults(),
+				'default'           => WP_DraftsForFriends_Options::defaults(),
 			)
 		);
 

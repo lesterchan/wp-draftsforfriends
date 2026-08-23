@@ -173,7 +173,7 @@ function resetPlugin() {
 	wpEval(
 		`global $wpdb;
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->draftsforfriends}" );
-		update_option( WP_DraftsForFriends_Options::OPTION, WP_DraftsForFriends_Options::get_defaults() );
+		update_option( WP_DraftsForFriends_Options::OPTION, WP_DraftsForFriends_Options::defaults() );
 		echo '<<<done>>>';`,
 	);
 }
@@ -226,7 +226,7 @@ function setRawOptions( options ) {
  */
 function defaultOptions() {
 	return JSON.parse(
-		wpEval( "echo '<<<' . wp_json_encode( WP_DraftsForFriends_Options::get_defaults() ) . '>>>';" ),
+		wpEval( "echo '<<<' . wp_json_encode( WP_DraftsForFriends_Options::defaults() ) . '>>>';" ),
 	);
 }
 

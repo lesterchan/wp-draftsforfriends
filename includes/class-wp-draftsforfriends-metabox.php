@@ -49,7 +49,7 @@ class WP_DraftsForFriends_Metabox {
 	public static function init() {
 		add_action( 'add_meta_boxes_post', array( __CLASS__, 'add_meta_box' ) );
 		add_action( 'save_post_post', array( __CLASS__, 'save' ) );
-		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'admin_enqueue_scripts' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
 	}
 
 	/**
@@ -77,7 +77,7 @@ class WP_DraftsForFriends_Metabox {
 	 * @param string $hook_suffix Current admin page.
 	 * @return void
 	 */
-	public static function admin_enqueue_scripts( $hook_suffix ) {
+	public static function enqueue( $hook_suffix ) {
 		if ( 'post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix ) {
 			return;
 		}

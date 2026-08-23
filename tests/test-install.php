@@ -124,7 +124,7 @@ class WP_DraftsForFriends_Install_Test extends WP_DraftsForFriends_TestCase {
 		WP_DraftsForFriends_Install::maybe_upgrade();
 
 		$this->assertSame(
-			WP_DraftsForFriends_Options::get_defaults(),
+			WP_DraftsForFriends_Options::defaults(),
 			get_option( WP_DraftsForFriends_Options::OPTION ),
 			'a fresh install should hold the defaults rather than an absent row merged on every read'
 		);

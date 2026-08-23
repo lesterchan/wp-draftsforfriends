@@ -128,7 +128,7 @@ class WP_DraftsForFriends_Metadata_Test extends Plugin_Metadata_TestCase {
 
 		$this->register_admin_menu();
 
-		WP_DraftsForFriends_Admin::admin_enqueue_scripts( $this->admin_hook_suffix );
+		WP_DraftsForFriends_Admin::enqueue( $this->admin_hook_suffix );
 	}
 
 	/**

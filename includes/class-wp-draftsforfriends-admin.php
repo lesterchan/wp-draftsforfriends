@@ -129,7 +129,7 @@ class WP_DraftsForFriends_Admin {
 	 */
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'add_page' ) );
-		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'admin_enqueue_scripts' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
 		add_filter( 'set-screen-option', array( __CLASS__, 'save_screen_option' ), 10, 3 );
 	}
 
@@ -332,7 +332,7 @@ class WP_DraftsForFriends_Admin {
 	 * @param string $hook_suffix Current admin page.
 	 * @return void
 	 */
-	public static function admin_enqueue_scripts( $hook_suffix ) {
+	public static function enqueue( $hook_suffix ) {
 		if ( '' === self::$hook_suffix || self::$hook_suffix !== $hook_suffix ) {
 			return;
 		}
