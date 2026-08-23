@@ -51,11 +51,26 @@ const {
 const DASHBOARD_URL = '/wp-admin/index.php';
 
 test.describe( 'The 2.0.0 upgrade', () => {
+	/**
+	 * The markers the running code expects, read once before any fixture is armed.
+	 *
+	 * Asking for them mid-test would be asking through a request that loads the
+	 * plugin, and the upgrade rides init: the question would run the migration
+	 * the test is about to watch for.
+	 *
+	 * @type {{plugin: string, db: string}}
+	 */
+	let versions;
+
+	test.beforeAll( () => {
+		versions = runningVersions();
+	} );
+
 	test.afterEach( async () => {
 		// Whatever a test took apart, the next spec expects a current install:
 		// the table present, the settings at their defaults, the markers stamped.
 		setLegacyDbVersion( null );
-		setVersionRow( runningVersions() );
+		setVersionRow( versions );
 		ensurePluginActive();
 		resetPlugin();
 	} );
@@ -81,7 +96,7 @@ test.describe( 'The 2.0.0 upgrade', () => {
 		expect( stored ).toEqual( defaultOptions() );
 
 		// Both markers, together, matching the code that is running.
-		expect( versionRow() ).toEqual( runningVersions() );
+		expect( versionRow() ).toEqual( versions );
 	} );
 
 	test( 'the unreleased schema counter is carried across and deleted', async ( { page } ) => {
@@ -91,14 +106,14 @@ test.describe( 'The 2.0.0 upgrade', () => {
 		// 2.0.0 work. It holds the same schema counter the new db marker holds,
 		// so carrying it across is what stops a site that already has the
 		// current table being sent through dbDelta() again for nothing.
-		setLegacyDbVersion( runningVersions().db );
+		setLegacyDbVersion( versions.db );
 
-		expect( legacyDbVersion() ).toBe( runningVersions().db );
+		expect( legacyDbVersion() ).toBe( versions.db );
 
 		await page.goto( DASHBOARD_URL );
 
 		expect( legacyDbVersion() ).toBe( false );
-		expect( versionRow() ).toEqual( runningVersions() );
+		expect( versionRow() ).toEqual( versions );
 	} );
 
 	test( 'a missing table is rebuilt, and sharing works on the far side', async ( {
@@ -136,7 +151,7 @@ test.describe( 'The 2.0.0 upgrade', () => {
 		await page.goto( DASHBOARD_URL );
 
 		expect( rawOptions() ).toEqual( { expires: 9, measure: 'd' } );
-		expect( versionRow() ).toEqual( runningVersions() );
+		expect( versionRow() ).toEqual( versions );
 	} );
 
 	test( 'a row an older, laxer build wrote is cleaned on the way through', async ( { page } ) => {
@@ -166,7 +181,7 @@ test.describe( 'The 2.0.0 upgrade', () => {
 		const once = { options: rawOptions(), versions: versionRow() };
 
 		expect( once.options ).toEqual( defaultOptions() );
-		expect( once.versions ).toEqual( runningVersions() );
+		expect( once.versions ).toEqual( versions );
 		expect( tableExists() ).toBe( true );
 
 		reactivatePlugin();
@@ -183,7 +198,7 @@ test.describe( 'The 2.0.0 upgrade', () => {
 		const stale = { expires: -5, measure: 'fortnights' };
 
 		setRawOptions( stale );
-		setVersionRow( runningVersions() );
+		setVersionRow( versions );
 
 		await page.goto( DASHBOARD_URL );
 

@@ -42,6 +42,15 @@ const DEFAULTS = {
 };
 
 /**
+ * The shares table, minus the site prefix.
+ *
+ * Spelled out rather than asked of WP_DraftsForFriends_Install::table(): the
+ * two helpers that use it run with the plugin switched off, so the class is
+ * not there to answer.
+ */
+const TABLE_SUFFIX = 'draftsforfriends';
+
+/**
  * Run PHP inside the tests environment and hand back what it printed.
  *
  * The code is base64'd rather than passed as itself: a post title holding
@@ -49,10 +58,11 @@ const DEFAULTS = {
  * arrives at the other end subtly different, and a fixture that is not the
  * payload byte for byte proves nothing about escaping it.
  *
- * @param {string} code PHP to evaluate, without an opening tag.
+ * @param {string}  code    PHP to evaluate, without an opening tag.
+ * @param {boolean} plugins Whether to load the plugins first.
  * @return {string} Whatever the code echoed between its markers.
  */
-function wpEval( code ) {
+function wpEval( code, plugins = true ) {
 	const encoded = Buffer.from( code, 'utf8' ).toString( 'base64' );
 
 	const output = execFileSync(
@@ -65,6 +75,9 @@ function wpEval( code ) {
 			'wp',
 			'eval',
 			`eval( base64_decode( '${ encoded }' ) );`,
+			// After a bare `--`, which is how wp-env passes a flag through to the
+			// command rather than reading it as one of its own.
+			...( plugins ? [] : [ '--', '--skip-plugins' ] ),
 		],
 		{ cwd: PLUGIN_ROOT, encoding: 'utf8', stdio: [ 'ignore', 'pipe', 'pipe' ] },
 	);
@@ -77,6 +90,20 @@ function wpEval( code ) {
 	const matched = output.match( /<<<([\s\S]*)>>>/ );
 
 	return matched ? matched[ 1 ] : '';
+}
+
+/**
+ * Read or write an option row with the plugin switched off for the request.
+ *
+ * maybe_upgrade() hangs off init, so an ordinary `wp eval` migrates the site
+ * before the code inside it gets to look: the helper asking whether the legacy
+ * row is still there would be the thing that deleted it.
+ *
+ * @param {string} code PHP to evaluate, without an opening tag.
+ * @return {string} Whatever the code echoed between its markers.
+ */
+function rowEval( code ) {
+	return wpEval( code, false );
 }
 
 /**
@@ -191,7 +218,7 @@ function resetPlugin() {
  */
 function rawOptions() {
 	return JSON.parse(
-		wpEval( "echo '<<<' . wp_json_encode( get_option( 'wp_draftsforfriends_options' ) ) . '>>>';" ),
+		rowEval( "echo '<<<' . wp_json_encode( get_option( 'wp_draftsforfriends_options' ) ) . '>>>';" ),
 	);
 }
 
@@ -203,14 +230,14 @@ function rawOptions() {
  */
 function setRawOptions( options ) {
 	if ( null === options ) {
-		wpEval( "delete_option( 'wp_draftsforfriends_options' ); echo '<<<done>>>';" );
+		rowEval( "delete_option( 'wp_draftsforfriends_options' ); echo '<<<done>>>';" );
 
 		return;
 	}
 
 	const data = Buffer.from( JSON.stringify( options ), 'utf8' ).toString( 'base64' );
 
-	wpEval(
+	rowEval(
 		`update_option( 'wp_draftsforfriends_options', json_decode( base64_decode( '${ data }' ), true ) );
 		echo '<<<done>>>';`,
 	);
@@ -237,7 +264,7 @@ function defaultOptions() {
  */
 function versionRow() {
 	return JSON.parse(
-		wpEval( "echo '<<<' . wp_json_encode( get_option( 'wp_draftsforfriends_version' ) ) . '>>>';" ),
+		rowEval( "echo '<<<' . wp_json_encode( get_option( 'wp_draftsforfriends_version' ) ) . '>>>';" ),
 	);
 }
 
@@ -250,7 +277,7 @@ function versionRow() {
 function setVersionRow( versions ) {
 	const data = Buffer.from( JSON.stringify( versions ), 'utf8' ).toString( 'base64' );
 
-	wpEval(
+	rowEval(
 		`update_option( 'wp_draftsforfriends_version', json_decode( base64_decode( '${ data }' ), true ) );
 		echo '<<<done>>>';`,
 	);
@@ -262,7 +289,7 @@ function setVersionRow( versions ) {
  * @return {void}
  */
 function deleteVersionRow() {
-	wpEval( "delete_option( 'wp_draftsforfriends_version' ); echo '<<<done>>>';" );
+	rowEval( "delete_option( 'wp_draftsforfriends_version' ); echo '<<<done>>>';" );
 }
 
 /**
@@ -291,7 +318,7 @@ function runningVersions() {
  */
 function legacyDbVersion() {
 	return JSON.parse(
-		wpEval( "echo '<<<' . wp_json_encode( get_option( 'draftsforfriends_db_version' ) ) . '>>>';" ),
+		rowEval( "echo '<<<' . wp_json_encode( get_option( 'draftsforfriends_db_version' ) ) . '>>>';" ),
 	);
 }
 
@@ -303,12 +330,12 @@ function legacyDbVersion() {
  */
 function setLegacyDbVersion( value ) {
 	if ( null === value ) {
-		wpEval( "delete_option( 'draftsforfriends_db_version' ); echo '<<<done>>>';" );
+		rowEval( "delete_option( 'draftsforfriends_db_version' ); echo '<<<done>>>';" );
 
 		return;
 	}
 
-	wpEval(
+	rowEval(
 		`update_option( 'draftsforfriends_db_version', '${ value }' ); echo '<<<done>>>';`,
 	);
 }
@@ -321,9 +348,9 @@ function setLegacyDbVersion( value ) {
 function tableExists() {
 	return (
 		'1' ===
-		wpEval(
+		rowEval(
 			`global $wpdb;
-			$table = WP_DraftsForFriends_Install::table();
+			$table = $wpdb->prefix . '${ TABLE_SUFFIX }';
 			echo '<<<' . (int) (bool) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) . '>>>';`,
 		)
 	);
@@ -339,9 +366,9 @@ function tableExists() {
  * @return {void}
  */
 function dropTable() {
-	wpEval(
+	rowEval(
 		`global $wpdb;
-		$table = WP_DraftsForFriends_Install::table();
+		$table = $wpdb->prefix . '${ TABLE_SUFFIX }';
 		$wpdb->query( "DROP TABLE IF EXISTS \`{$table}\`" );
 		echo '<<<done>>>';`,
 	);
