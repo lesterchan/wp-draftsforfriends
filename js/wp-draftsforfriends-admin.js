@@ -1,14 +1,9 @@
 /**
  * WP-DraftsForFriends admin screen.
  *
- * Progressive enhancement only. Every write on this screen is a real nonced form
- * post handled server side, so nothing here is load-bearing: with the script
- * absent the screen still shares, extends and revokes. What it adds is catching
- * a bad duration before the round trip, a confirmation in front of the one
- * irreversible action, and a button that copies a share link to the clipboard.
- *
- * Rewritten without jQuery for 2.0.0. Handlers are delegated from document, so
- * they hold for whichever page of the list is on screen.
+ * Progressive enhancement only: every write is a real nonced form post, so the
+ * screen shares, extends and revokes without this. Handlers are delegated from
+ * document, so they hold across pages of the list.
  */
 ( function() {
 	'use strict';
@@ -18,8 +13,8 @@
 	/**
 	 * Show a message above the screen, as a core notice.
 	 *
-	 * The server's own messages come through settings_errors(); this is the same
-	 * markup for the ones raised before a request is made.
+	 * The same markup settings_errors() uses, for messages raised before a
+	 * request is made.
 	 *
 	 * @param {string} type    Either 'success' or 'error'.
 	 * @param {string} message Text to show.
@@ -76,8 +71,7 @@
 	/**
 	 * The bulk action the list form is about to apply.
 	 *
-	 * Core renders the top dropdown as `action` and the bottom one as `action2`
-	 * and keeps the two in step itself, so whichever is not still on its
+	 * Core keeps `action` and `action2` in step, so whichever is off its
 	 * placeholder is the answer.
 	 *
 	 * @param {HTMLElement} form The list form.
