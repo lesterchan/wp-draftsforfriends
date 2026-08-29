@@ -111,6 +111,75 @@ class WP_DraftsForFriends_Metabox_Test extends WP_DraftsForFriends_TestCase {
 		$this->assert_option_selected( 'h', $html, 'The duration unit starts on the configured default.' );
 	}
 
+	public function test_a_saved_draft_gets_the_button_and_keeps_the_checkbox_for_a_reader_without_javascript() {
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render_box( $this->draft_id );
+
+		$this->assertStringContainsString( 'draftsforfriends-create', $html, 'The button that creates a link without a save is in the box.' );
+		$this->assertStringContainsString( 'data-post="' . $this->draft_id . '"', $html, 'the button has to say which post it is creating a link for' );
+		$this->assertStringContainsString( 'draftsforfriends-create-now hide-if-no-js"', $html, 'a button that does nothing without a script must not be the only control on the screen' );
+		$this->assertStringContainsString( 'draftsforfriends-create-on-save hide-if-js', $html, 'the checkbox is the fallback here, so it is the one hidden when the script is running' );
+	}
+
+	public function test_a_post_that_has_never_been_saved_gets_the_checkbox_instead() {
+		wp_set_current_user( $this->author_id );
+
+		$auto = self::factory()->post->create(
+			array(
+				'post_status' => 'auto-draft',
+				'post_author' => $this->author_id,
+			)
+		);
+
+		$html = $this->render_box( $auto );
+
+		// The preview denies auto-draft, so a link made now would 404. The
+		// checkbox is right here because the save it rides moves the post to
+		// draft before the share is written.
+		$this->assertStringContainsString( 'draftsforfriends-create-now hide-if-no-js hidden', $html, 'the button would mint a link the preview refuses to serve' );
+		$this->assertStringContainsString( 'draftsforfriends-create-on-save"', $html, 'the checkbox is the only control that works on a post with no status yet' );
+	}
+
+	public function test_the_box_carries_somewhere_of_its_own_to_report_into() {
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render_box( $this->draft_id );
+
+		// The block editor draws meta boxes on a screen with no .wrap, so a
+		// message raised as an admin notice would go nowhere.
+		$this->assertStringContainsString( 'id="draftsforfriends-metabox-message"', $html, 'the button has nowhere to say what happened' );
+		$this->assertStringContainsString( 'role="alert"', $html, 'a message that is only painted is not announced' );
+	}
+
+	public function test_the_box_carries_the_list_a_new_link_is_inserted_into() {
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render_box( $this->draft_id );
+
+		$this->assertStringContainsString( 'draftsforfriends-metabox-shares', $html, 'the script has nowhere to put the link it just created' );
+	}
+
+	public function test_a_heading_separates_the_posts_links_from_the_controls_that_make_another() {
+		$this->make_share( $this->author_id, $this->draft_id );
+
+		$html = $this->render_box( $this->draft_id );
+
+		$this->assertStringContainsString( 'Share Links', $html, 'The links the post already has are headed.' );
+		$this->assertStringContainsString( 'New Share Link', $html, 'The controls that make another are headed too, or the box reads as one run-on list.' );
+		$this->assertLessThan( strpos( $html, 'New Share Link' ), (int) strpos( $html, 'Share Links' ), 'the heading for the existing links has to come before the one for the new one' );
+	}
+
+	public function test_the_links_heading_stays_out_of_the_way_until_there_is_a_link() {
+		wp_set_current_user( $this->author_id );
+
+		$html = $this->render_box( $this->draft_id );
+
+		// Rendered but hidden, because the script unhides it when it creates
+		// the post's first link rather than building the heading itself.
+		$this->assertMatchesRegularExpression( '/id="draftsforfriends-metabox-links-heading" hidden/', $html, 'a heading over an empty list says the post has links when it has none' );
+	}
+
 	public function test_a_published_post_gets_a_sentence_rather_than_controls() {
 		$this->make_share( $this->author_id, $this->draft_id );
 

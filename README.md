@@ -4,7 +4,7 @@ Donate link: https://lesterchan.net/site/donation/
 Tags: friends, preview, drafts, send, share draft  
 Requires at least: 6.8  
 Tested up to: 7.1  
-Stable tag: 2.0.1  
+Stable tag: 2.0.2  
 Requires PHP: 8.2  
 License: GPLv2 or later  
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,7 +25,7 @@ Modified from Drafts for Friends, originally by Neville Longbottom. The plugin i
 * An expiry you choose in seconds, minutes, hours or days, with a default you set once
 * Works for a logged-out visitor with no account
 * Scheduled and pending posts can be shared as well as drafts
-* A box in the post editor that shows the post's links and creates one on save
+* A box in the post editor that shows the post's links and creates another with one button
 * A sortable, paginated list of every link you have out, with the time each has left
 * Extend or revoke links in bulk
 * Comments are forced closed on a shared draft
@@ -157,6 +157,8 @@ No. That is the point of the plugin: the link works for a logged-out visitor, an
 ### Does the screen need JavaScript?
 No. Sharing, extending and revoking are ordinary form submissions handled on the server, so all three work with JavaScript turned off. The script only adds the copy button, a warning before you revoke, and catching a missing draft or a nonsense duration before the page reloads.
 
+The post editor's box is the same: with JavaScript off it shows a checkbox that creates the link when you next save the post, in place of the **Create Share Link** button.
+
 ## Screenshots
 
 1. Posts -> WP-DraftsForFriends: the share form, and every share with its countdown
@@ -164,6 +166,12 @@ No. Sharing, extending and revoking are ordinary form submissions handled on the
 3. What the friend sees: an unpublished post, with no account and no login
 
 ## Changelog
+
+### 2.0.2
+* NEW: The post editor's box creates a share link when you press **Create Share Link**, without saving the post and without reloading the page. The new link, its countdown and its Copy Link button appear in the box straight away, and pressing the button again gives you another link, so each friend can have one of their own.
+* CHANGED: The create-on-save checkbox is now shown only where it is the control that works: on a post that has never been saved, where WordPress has not yet given the post a status a share link may serve, and with JavaScript turned off. Everywhere else it is the button. A checkbox that defers an action until some later save reads as broken on a post that was saved long ago.
+* CHANGED: The box is split under two headings, **Share Links** over the links the post already has and **New Share Link** over the controls that make another, with the duration's label on its own line so the amount and the unit fit the side column instead of wrapping.
+* CHANGED: The box reports what happened inside itself rather than through an admin notice at the top of the screen. The block editor draws meta boxes on a screen that has no notice area, so a message raised there was never seen.
 
 ### 2.0.1
 * NEW: A Drafts for Friends box in the post editor: it lists the post's share links with the time each has left and a Copy Link button for each, and creates a new link when the post is saved with its checkbox ticked. Posts only, because a share link asks for the post as `?p=<id>` and WordPress answers that for posts alone.

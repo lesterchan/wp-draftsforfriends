@@ -83,8 +83,9 @@ class WP_DraftsForFriends {
 
 		// The list table pulls in wp-admin/includes/class-wp-list-table.php, so
 		// neither it nor the admin screens are loaded on front-end requests.
-		// There is no AJAX endpoint to keep loading unconditionally any more:
-		// every write is an ordinary form post to the screen itself.
+		// The meta box's create endpoint is reached through admin-ajax.php,
+		// which is_admin() answers for, so nothing has to load on the front end
+		// to serve it.
 		if ( is_admin() ) {
 			$this->load_admin();
 

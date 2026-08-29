@@ -90,6 +90,11 @@ WP_DraftsForFriends_Install::maybe_upgrade();
  */
 require_once __DIR__ . '/helper-testcase.php';
 
+// The AJAX suite's base, which cannot be the one above: only
+// WP_Ajax_UnitTestCase turns the endpoint's wp_die() into a catchable
+// exception.
+require_once __DIR__ . '/helper-ajax-testcase.php';
+
 // The WP-CLI stand-ins, in dependency order: the base class the command file
 // extends, then the formatter it prints through, then the facade -- which ends
 // by requiring the command itself, so nothing else has to know that the plugin

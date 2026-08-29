@@ -379,6 +379,18 @@ class WP_DraftsForFriends_Admin {
 				'copy'          => __( 'Copy Link', 'wp-draftsforfriends' ),
 				'copied'        => __( 'Copied!', 'wp-draftsforfriends' ),
 				'copyFailed'    => __( 'Could not copy the link. Select it and copy it by hand.', 'wp-draftsforfriends' ),
+				'create'        => __( 'Create Share Link', 'wp-draftsforfriends' ),
+				'creating'      => __( 'Creating…', 'wp-draftsforfriends' ),
+				'createFailed'  => __( 'Could not create the share link. Reload the editor and try again.', 'wp-draftsforfriends' ),
+
+				/*
+				 * The meta box's create button is the one control here that is
+				 * not a form post, so it needs somewhere to post to and a nonce
+				 * that did not travel in the editor's form.
+				 */
+				'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+				'createAction'  => WP_DraftsForFriends_Metabox::AJAX_ACTION,
+				'createNonce'   => wp_create_nonce( WP_DraftsForFriends_Metabox::AJAX_NONCE_ACTION ),
 			)
 		);
 	}

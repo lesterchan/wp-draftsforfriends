@@ -598,7 +598,7 @@ class WP_DraftsForFriends_Admin_Test extends WP_DraftsForFriends_TestCase {
 
 		$this->assertStringContainsString( 'wpDraftsForFriendsL10n', $data, '§6 names the localised object {{CLASS}}L10n in lowerCamel' );
 
-		foreach ( array( 'errorPostId', 'errorExpires', 'errorSelect', 'confirmRevoke', 'copy', 'copied', 'copyFailed' ) as $key ) {
+		foreach ( array( 'errorPostId', 'errorExpires', 'errorSelect', 'confirmRevoke', 'copy', 'copied', 'copyFailed', 'create', 'creating', 'createFailed', 'ajaxUrl', 'createAction', 'createNonce' ) as $key ) {
 			$this->assertStringContainsString( '"' . $key . '"', $data, "the '{$key}' string is not localised into the page" );
 		}
 	}

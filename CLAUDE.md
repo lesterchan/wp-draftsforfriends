@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Gives an unpublished post a time-limited public URL —
 `?p=<id>&draftsforfriends=<hash>` — so an author can show a draft to somebody
 who has no account. One page with two tabs under **Posts**: `Shared Drafts` (a
-`WP_List_Table`) and `Settings`. Since 2.0.1 the post editor also carries a
-side meta box that lists the post's links and creates one on save.
+`WP_List_Table`) and `Settings`. The post editor also carries a side meta box
+that lists the post's links and creates another.
 
 ## Data
 
@@ -75,8 +75,23 @@ it.
 * **An absent duration cleans to the shipped two hours, not one second**, and
   the sanitiser reads nothing back out of the database to work that out. Pinned
   by `test_the_sanitiser_reads_nothing_back_out_of_the_database`.
-* The `wp_ajax_draftsforfriends_admin` endpoint is gone — every write is an
-  ordinary form post now.
+* **The meta box has two create controls and only ever shows one.** The button
+  posts to `admin-ajax.php`; the checkbox rides the post's own save. Which one
+  belongs turns on the post's status, and the reason is `auto-draft`: the
+  preview denies that status, so the button would mint a link that 404s, while
+  the checkbox is correct there because the save carrying it moves the post to
+  `draft` before the share is written. So the checkbox shows on a never-saved
+  post and with JavaScript off, and the button everywhere else. The ajax handler
+  re-checks the status, because the swap is done in the browser.
+* **The block editor never re-renders a meta box.** The box's own script swaps
+  the controls over on the first save by subscribing to `core/editor`; classic
+  reloads and the server renders the right one. The same fact is why the box
+  reports into a paragraph of its own rather than through `notify()` — the
+  block editor's meta box area has no `.wrap` for an admin notice to land in.
+* The old `wp_ajax_draftsforfriends_admin` endpoint is gone and is not coming
+  back. `wp_ajax_draftsforfriends_create_share` is not it: that one action
+  serves the meta box's button and nothing else, and every write reachable from
+  the screen is still an ordinary form post.
 * The old page slug embedded the plugin's folder name, so renaming the directory
   broke the screen.
 * **The meta box is posts-only, and that is the URL's fault, not a whim.** The
@@ -95,9 +110,10 @@ it.
 
 `wp draftsforfriends list|create|extend|revoke` — the four things the screen
 does, and no fifth. **There is no REST namespace, and that is a decision rather
-than a gap:** the plugin registers no `admin-ajax.php` action, every write is an
-ordinary form post, and the one client that is not a browser following a link is
-the command below. A route would be surface with nothing on the other end of it.
+than a gap:** every write the screen makes is an ordinary form post, the one
+`admin-ajax.php` action there is exists to spare the post editor a reload, and
+the one client that is not a browser is the command below. A route would be
+surface with nothing on the other end of it.
 
 **Every subcommand goes through `WP_DraftsForFriends_Shares`**, which already
 returned data rather than printing it, so nothing had to be extracted: the screen

@@ -9,6 +9,9 @@
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+	boxMarkup,
+	boxMessageClass,
+	boxMessageText,
 	l10n,
 	loadScript,
 	noticeClass,
@@ -306,6 +309,188 @@ describe( 'wp-draftsforfriends-admin', () => {
 			expect( writeText ).toHaveBeenCalledWith(
 				'https://example.test/?p=4&draftsforfriends=hash-9',
 			);
+		} );
+	} );
+
+	describe( "the meta box's create button", () => {
+		/**
+		 * Answer the next fetch with what admin-ajax.php would have said.
+		 *
+		 * @param {Object} body  Decoded response body.
+		 * @param {Object} extra Properties to merge over the response object.
+		 * @return {Object} The mock.
+		 */
+		function respondWith( body, extra = {} ) {
+			const fetch = vi.fn( () =>
+				Promise.resolve(
+					Object.assign( { json: () => Promise.resolve( body ) }, extra ),
+				),
+			);
+
+			window.fetch = fetch;
+
+			return fetch;
+		}
+
+		/**
+		 * A successful create, as the endpoint sends it.
+		 *
+		 * @param {string} url The new link.
+		 * @return {Object} The response body.
+		 */
+		function created( url ) {
+			return {
+				success: true,
+				data: {
+					url,
+					expires: 'Expires in 2 hours',
+					message: "Shared draft for 'A Draft' created",
+				},
+			};
+		}
+
+		beforeEach( () => {
+			document.body.innerHTML = boxMarkup();
+		} );
+
+		it( 'posts the action, the nonce, the post and the duration', async () => {
+			const fetch = respondWith( created( 'https://example.test/?p=12&draftsforfriends=new' ) );
+
+			document.querySelector( '.draftsforfriends-create' ).click();
+
+			await settle();
+
+			expect( fetch ).toHaveBeenCalledTimes( 1 );
+
+			const [ url, options ] = fetch.mock.calls[ 0 ];
+			const body = Object.fromEntries( options.body );
+
+			expect( url ).toBe( l10n().ajaxUrl );
+			expect( options.credentials ).toBe( 'same-origin' );
+			expect( body ).toEqual( {
+				action: l10n().createAction,
+				nonce: l10n().createNonce,
+				post_id: '12',
+				expires: '2',
+				measure: 'h',
+			} );
+		} );
+
+		it( 'puts the new link at the top of the list, with its own copy button', async () => {
+			respondWith( created( 'https://example.test/?p=12&draftsforfriends=new' ) );
+
+			document.body.innerHTML = boxMarkup( {
+				shares: [ 'https://example.test/?p=12&draftsforfriends=old' ],
+			} );
+
+			document.querySelector( '.draftsforfriends-create' ).click();
+
+			await settle();
+
+			const links = document.querySelectorAll(
+				'.draftsforfriends-metabox-shares a',
+			);
+
+			expect( links ).toHaveLength( 2 );
+			expect( links[ 0 ].textContent ).toBe(
+				'https://example.test/?p=12&draftsforfriends=new',
+			);
+			expect(
+				document.querySelectorAll( '.draftsforfriends-copy' )[ 0 ]
+					.dataset.link,
+			).toBe( 'https://example.test/?p=12&draftsforfriends=new' );
+			expect( boxMessageText() ).toBe(
+				"Shared draft for 'A Draft' created",
+			);
+			expect( boxMessageClass() ).toContain( 'notice-success' );
+		} );
+
+		it( 'brings out the list heading with the post\'s first link', async () => {
+			respondWith(
+				created( 'https://example.test/?p=12&draftsforfriends=new' ),
+			);
+
+			const heading = document.getElementById(
+				'draftsforfriends-metabox-links-heading',
+			);
+
+			expect( heading.hidden ).toBe( true );
+
+			document.querySelector( '.draftsforfriends-create' ).click();
+
+			await settle();
+
+			expect( heading.hidden ).toBe( false );
+		} );
+
+		it( 'reports in the box rather than as a screen notice', async () => {
+			respondWith( created( 'https://example.test/?p=12&draftsforfriends=new' ) );
+
+			document.querySelector( '.draftsforfriends-create' ).click();
+
+			await settle();
+
+			// The editor has no .wrap, so a notice raised there would be lost.
+			expect( document.getElementById( 'draftsforfriends-notice' ) ).toBeNull();
+		} );
+
+		it( 'says what the endpoint refused, and adds nothing', async () => {
+			respondWith( {
+				success: false,
+				data: { message: 'Save this post first, then create a share link for it.' },
+			} );
+
+			document.querySelector( '.draftsforfriends-create' ).click();
+
+			await settle();
+
+			expect( boxMessageText() ).toBe(
+				'Save this post first, then create a share link for it.',
+			);
+			expect( boxMessageClass() ).toContain( 'notice-error' );
+			expect(
+				document.querySelectorAll(
+					'.draftsforfriends-metabox-shares a',
+				),
+			).toHaveLength( 0 );
+		} );
+
+		it( 'falls back to its own sentence when the answer is not one it can read', async () => {
+			window.fetch = vi.fn( () => Promise.reject( new Error( 'offline' ) ) );
+
+			document.querySelector( '.draftsforfriends-create' ).click();
+
+			await settle();
+
+			expect( boxMessageText() ).toBe( l10n().createFailed );
+		} );
+
+		it( 'refuses a nonsense duration without asking the server', async () => {
+			const fetch = respondWith( created( 'https://example.test/?p=12' ) );
+
+			document.getElementById(
+				'draftsforfriends-metabox-expires',
+			).value = '0';
+
+			document.querySelector( '.draftsforfriends-create' ).click();
+
+			await settle();
+
+			expect( fetch ).not.toHaveBeenCalled();
+			expect( boxMessageText() ).toBe( l10n().errorExpires );
+		} );
+
+		it( 'puts its label back so a second link can be created', async () => {
+			respondWith( created( 'https://example.test/?p=12&draftsforfriends=new' ) );
+
+			const button = document.querySelector( '.draftsforfriends-create' );
+
+			button.click();
+
+			await settle();
+
+			expect( button.disabled ).toBe( false );
+			expect( button.textContent ).toBe( l10n().create );
 		} );
 	} );
 

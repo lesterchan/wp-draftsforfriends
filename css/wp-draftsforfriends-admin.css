@@ -65,3 +65,29 @@
 .draftsforfriends-metabox-shares li + li {
 	margin-block-start: 12px;
 }
+
+/* The box's own message line, since the block editor draws no .wrap here. */
+#draftsforfriends-metabox-message {
+	margin-block: 8px 0;
+}
+
+/* The two headings that split the post's links from the controls that make
+   another. Core gives an h4 in a postbox no margin worth the name. */
+.draftsforfriends-metabox-heading {
+	margin-block: 1em 0.5em;
+}
+
+.draftsforfriends-metabox-heading:first-child {
+	margin-block-start: 0;
+}
+
+/* The box is a side column: the number and the unit together are wider than it
+   is, so the label takes its own line rather than pushing them onto two. */
+.draftsforfriends-metabox-duration label[for="draftsforfriends-metabox-expires"] {
+	display: block;
+	margin-block-end: 4px;
+}
+
+.draftsforfriends-metabox-duration select {
+	max-width: 100%;
+}

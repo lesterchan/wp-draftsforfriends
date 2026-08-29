@@ -45,7 +45,88 @@ export function l10n() {
 		copy: 'Copy Link',
 		copied: 'Copied!',
 		copyFailed: 'Could not copy the link. Select it and copy it by hand.',
+		create: 'Create Share Link',
+		creating: 'Creating…',
+		createFailed:
+			'Could not create the share link. Reload the editor and try again.',
+		ajaxUrl: 'https://example.org/wp-admin/admin-ajax.php',
+		createAction: 'draftsforfriends_create_share',
+		createNonce: 'a-nonce',
 	};
+}
+
+/**
+ * Markup matching what WP_DraftsForFriends_Metabox::render() emits.
+ *
+ * The post editor is not the screen: there is no .wrap here, which is the whole
+ * reason the box reports into a paragraph of its own.
+ *
+ * @param {Object}  options         Rendering options.
+ * @param {boolean} options.unsaved Whether the post is still an auto-draft.
+ * @param {Array}   options.shares  Share links already on the post.
+ * @return {string} The markup.
+ */
+export function boxMarkup( { unsaved = false, shares = [] } = {} ) {
+	const items = shares
+		.map(
+			( url ) => `
+				<li>
+					<a href="${ url }">${ url }</a>
+					<span class="description">Expires in 2 hours</span>
+					<button type="button" class="button button-small hide-if-no-js draftsforfriends-copy" data-link="${ url }">Copy Link</button>
+				</li>`,
+		)
+		.join( '' );
+
+	return `
+		<div id="post-body">
+			<div id="wp-draftsforfriends" class="postbox">
+				<div class="inside">
+					<h4 class="draftsforfriends-metabox-heading" id="draftsforfriends-metabox-links-heading" ${ shares.length ? '' : 'hidden' }>Share Links</h4>
+					<ul class="draftsforfriends-metabox-shares">${ items }</ul>
+					<h4 class="draftsforfriends-metabox-heading">New Share Link</h4>
+					<p>
+						<label for="draftsforfriends-metabox-expires">Share it for:</label>
+						<input name="draftsforfriends_expires" id="draftsforfriends-metabox-expires" type="number" value="2" />
+						<select name="draftsforfriends_measure" id="draftsforfriends-metabox-measure">
+							<option value="h" selected>hours</option>
+						</select>
+					</p>
+					<p class="draftsforfriends-create-now hide-if-no-js${ unsaved ? ' hidden' : '' }">
+						<button type="button" class="button draftsforfriends-create" data-post="12">Create Share Link</button>
+					</p>
+					<p class="draftsforfriends-create-on-save${ unsaved ? '' : ' hide-if-js' }">
+						<label for="draftsforfriends-metabox-create">
+							<input type="checkbox" name="draftsforfriends_create" id="draftsforfriends-metabox-create" value="1" />
+							Create a share link when this post is saved
+						</label>
+					</p>
+					<p id="draftsforfriends-metabox-message" role="alert" hidden></p>
+				</div>
+			</div>
+		</div>`;
+}
+
+/**
+ * The text of the message the box is showing, or '' if it is showing none.
+ *
+ * @return {string} The message.
+ */
+export function boxMessageText() {
+	const box = document.getElementById( 'draftsforfriends-metabox-message' );
+
+	return box && ! box.hidden ? box.textContent : '';
+}
+
+/**
+ * The class the box's message is wearing.
+ *
+ * @return {string} The class attribute.
+ */
+export function boxMessageClass() {
+	const box = document.getElementById( 'draftsforfriends-metabox-message' );
+
+	return box ? box.className : '';
 }
 
 /**
