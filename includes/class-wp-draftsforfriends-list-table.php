@@ -252,7 +252,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	 * one after another tells a screen reader user nothing about which share they
 	 * are about to revoke.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	public function column_cb( $item ) {
@@ -269,7 +269,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	/**
 	 * The ID column.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	public function column_id( $item ) {
@@ -279,7 +279,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	/**
 	 * The date created column.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	public function column_date_created( $item ) {
@@ -295,7 +295,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	 * post, because a column of identical "Edit Draft" links says nothing about
 	 * which draft.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	public function column_post_title( $item ) {
@@ -325,7 +325,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	/**
 	 * The "for <post>" suffix a row action's accessible name carries.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	private function for_post_title( $item ) {
@@ -336,7 +336,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	/**
 	 * The expiry countdown column.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	public function column_date_expired( $item ) {
@@ -346,7 +346,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	/**
 	 * The last extended column.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	public function column_date_extended( $item ) {
@@ -360,7 +360,7 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	/**
 	 * The share link. Copying it is the row action on the Post column.
 	 *
-	 * @param object $item Share row.
+	 * @param stdClass $item Share row.
 	 * @return string
 	 */
 	public function column_link( $item ) {
@@ -372,8 +372,8 @@ class WP_DraftsForFriends_List_Table extends WP_List_Table {
 	/**
 	 * Fallback for any column without its own method.
 	 *
-	 * @param object $item        Share row.
-	 * @param string $column_name Column being rendered.
+	 * @param stdClass $item        Share row.
+	 * @param string   $column_name Column being rendered.
 	 * @return string
 	 */
 	public function column_default( $item, $column_name ) {

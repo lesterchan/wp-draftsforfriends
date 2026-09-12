@@ -350,7 +350,7 @@ class WP_DraftsForFriends_Shares {
 		 *
 		 * @since 2.0.0
 		 *
-		 * @param object  $share The share row.
+		 * @param stdClass  $share The share row.
 		 * @param WP_Post $post  The post it shares.
 		 */
 		do_action( 'wp_draftsforfriends_share_created', $share, $post );
@@ -433,7 +433,7 @@ class WP_DraftsForFriends_Shares {
 		 *
 		 * @since 2.0.0
 		 *
-		 * @param object $share        The share row, as it now stands.
+		 * @param stdClass $share        The share row, as it now stands.
 		 * @param string $was_expiring The expiry it carried before, MySQL format.
 		 */
 		do_action( 'wp_draftsforfriends_share_extended', $extended, $share->date_expired );
@@ -487,7 +487,7 @@ class WP_DraftsForFriends_Shares {
 		 *
 		 * @since 2.0.0
 		 *
-		 * @param object $share The share row as it was before deletion.
+		 * @param stdClass $share The share row as it was before deletion.
 		 */
 		do_action( 'wp_draftsforfriends_share_revoked', $share );
 
@@ -543,7 +543,7 @@ class WP_DraftsForFriends_Shares {
 	 *
 	 * @since 2.0.0
 	 *
-	 * @param object $share Share row.
+	 * @param stdClass $share Share row.
 	 * @return string
 	 */
 	public static function url( $share ) {
@@ -559,7 +559,7 @@ class WP_DraftsForFriends_Shares {
 		 * @since 2.0.0
 		 *
 		 * @param string $url   The share URL.
-		 * @param object $share The share row it was built from.
+		 * @param stdClass $share The share row it was built from.
 		 */
 		return (string) apply_filters( 'wp_draftsforfriends_share_url', $url, $share );
 	}
